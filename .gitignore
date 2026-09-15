@@ -1,0 +1,23 @@
+# Xcode
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+*.xcuserstate
+DerivedData/
+.build/
+.swiftpm/
+Package.resolved
+
+# macOS
+.DS_Store
+*.swp
+*~.nib
+
+# Swift
+*.o
+*.LinkFileList
+*.hmap
+
+# App-specific
+GasGridManager.xcodeproj/
+GasGridManager.xcworkspace/
