@@ -1,5 +1,4 @@
 import SwiftUI
-import GasGridManagerLib
 
 @main
 struct GasGridManagerApp: App {
