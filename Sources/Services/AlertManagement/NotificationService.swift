@@ -27,7 +27,8 @@ final class NotificationService: ObservableObject {
     func checkAuthorization() async {
         guard isAvailable else { return }
         let settings = await UNUserNotificationCenter.current().notificationSettings()
-        authorizationStatus = settings.authorizationStatus
+        let status = settings.authorizationStatus
+        authorizationStatus = status
     }
 
     func sendAlertNotification(alert: Alert) {
