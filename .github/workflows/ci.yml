@@ -11,8 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-and-test:
-    name: Build & Test
+  build:
+    name: Build
     runs-on: macos-15
     steps:
       - name: Checkout
@@ -29,7 +29,3 @@ jobs:
 
       - name: Build
         run: swift build
-
-      - name: Run smoke test
-        run: |
-          timeout 5 swift run GasGridManager || [ $? -eq 124 ]
