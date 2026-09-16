@@ -260,6 +260,11 @@ struct AddStationSheet: View {
 
             Form {
                 TextField("Station Name", text: $name)
+                    .onChange(of: name) { _, newValue in
+                        if newValue.count > 100 {
+                            name = String(newValue.prefix(100))
+                        }
+                    }
 
                 Picker("Station Type", selection: $stationType) {
                     ForEach(StationType.allCases) { type in

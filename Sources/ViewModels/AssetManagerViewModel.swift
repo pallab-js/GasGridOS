@@ -57,11 +57,13 @@ final class AssetManagerViewModel: ObservableObject {
     func deleteStation(_ station: NetworkStation) throws {
         try stationRepo.delete(station)
         stations.removeAll { $0.id == station.id }
+        DatabaseManager.shared.logAuditEvent("DELETE_STATION", details: "Deleted station '\(station.name)' (ID: \(station.id.uuidString))")
     }
 
     func deletePipeline(_ pipeline: Pipeline) throws {
         try pipelineRepo.delete(pipeline)
         pipelines.removeAll { $0.id == pipeline.id }
+        DatabaseManager.shared.logAuditEvent("DELETE_PIPELINE", details: "Deleted pipeline '\(pipeline.name)' (ID: \(pipeline.id.uuidString))")
     }
 
     func addStation(_ station: NetworkStation) throws {

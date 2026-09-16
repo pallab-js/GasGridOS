@@ -63,6 +63,7 @@ final class AlertViewModel: ObservableObject {
         do {
             try alertRepo.delete(alert)
             alerts.removeAll { $0.id == alert.id }
+            DatabaseManager.shared.logAuditEvent("DELETE_ALERT", details: "Deleted alert '\(alert.title)' (ID: \(alert.id.uuidString))")
         } catch {
             errorMessage = "Failed to delete alert: \(error.localizedDescription)"
         }

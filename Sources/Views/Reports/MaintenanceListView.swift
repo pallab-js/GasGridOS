@@ -339,6 +339,11 @@ struct MaintenanceDetailView: View {
             Form {
                 Section("Details") {
                     TextField("Description", text: $description)
+                        .onChange(of: description) { _, newValue in
+                            if newValue.count > 200 {
+                                description = String(newValue.prefix(200))
+                            }
+                        }
 
                     Picker("Maintenance Type", selection: $maintenanceType) {
                         ForEach(MaintenanceType.allCases) { type in
@@ -351,6 +356,11 @@ struct MaintenanceDetailView: View {
 
                 Section("Assignment") {
                     TextField("Assigned To", text: $performedBy)
+                        .onChange(of: performedBy) { _, newValue in
+                            if newValue.count > 100 {
+                                performedBy = String(newValue.prefix(100))
+                            }
+                        }
 
                     if let cost = log.cost {
                         HStack {
@@ -411,6 +421,11 @@ struct AddMaintenanceView: View {
 
             Form {
                 TextField("Description", text: $description)
+                    .onChange(of: description) { _, newValue in
+                        if newValue.count > 200 {
+                            description = String(newValue.prefix(200))
+                        }
+                    }
 
                 Picker("Asset Type", selection: $assetType) {
                     Text("Station").tag("Station")
@@ -428,6 +443,11 @@ struct AddMaintenanceView: View {
                 DatePicker("Scheduled Date", selection: $scheduledDate)
 
                 TextField("Assigned To", text: $performedBy)
+                    .onChange(of: performedBy) { _, newValue in
+                        if newValue.count > 100 {
+                            performedBy = String(newValue.prefix(100))
+                        }
+                    }
             }
             .formStyle(.grouped)
 

@@ -371,6 +371,7 @@ struct SettingsView: View {
     }
 
     private func clearAllData() {
+        DatabaseManager.shared.logAuditEvent("CLEAR_ALL_DATA", details: "User cleared all historical data")
         DatabaseManager.shared.closeDatabase()
         do {
             try DatabaseManager.shared.openDatabase()

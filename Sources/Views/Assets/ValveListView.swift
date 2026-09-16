@@ -227,6 +227,11 @@ struct ValveDetailView: View {
             Form {
                 Section("General") {
                     TextField("Name", text: $name)
+                        .onChange(of: name) { _, newValue in
+                            if newValue.count > 100 {
+                                name = String(newValue.prefix(100))
+                            }
+                        }
 
                     Picker("Status", selection: $status) {
                         ForEach(ValveStatus.allCases) { status in
@@ -317,6 +322,11 @@ struct AddValveSheet: View {
 
             Form {
                 TextField("Valve Name", text: $name)
+                    .onChange(of: name) { _, newValue in
+                        if newValue.count > 100 {
+                            name = String(newValue.prefix(100))
+                        }
+                    }
 
                 Picker("Station", selection: $selectedStation) {
                     Text("Select...").tag(nil as NetworkStation?)

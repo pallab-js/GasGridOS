@@ -1,9 +1,13 @@
 import Foundation
 import GRDB
+import os.log
+
+private let logger = Logger(subsystem: "com.gasgrid", category: "Database")
 
 final class DatabaseManager: @unchecked Sendable {
     static let shared = DatabaseManager()
 
+    private let lock = NSLock()
     private(set) var dbQueue: DatabaseQueue?
 
     private init() {}
@@ -18,13 +22,37 @@ final class DatabaseManager: @unchecked Sendable {
         try fileManager.createDirectory(at: dbFolder, withIntermediateDirectories: true)
 
         let dbPath = dbFolder.appendingPathComponent("gasgrid.sqlite").path
-        dbQueue = try DatabaseQueue(path: dbPath)
+        let queue = try DatabaseQueue(path: dbPath)
+        
+        lock.lock()
+        dbQueue = queue
+        lock.unlock()
 
         try createTables()
     }
 
     func closeDatabase() {
+        lock.lock()
         dbQueue = nil
+        lock.unlock()
+    }
+
+    func logAuditEvent(_ action: String, details: String) {
+        lock.lock()
+        let queue = dbQueue
+        lock.unlock()
+        
+        guard let queue = queue else { return }
+        do {
+            try queue.write { db in
+                try db.execute(sql: """
+                    INSERT INTO auditLog (id, action, details, timestamp)
+                    VALUES (?, ?, ?, ?)
+                    """, arguments: [UUID().uuidString, action, details, Date()])
+            }
+        } catch {
+            logger.error("Failed to log audit event: \(error.localizedDescription)")
+        }
     }
 
     private func createTables() throws {
@@ -123,6 +151,13 @@ final class DatabaseManager: @unchecked Sendable {
                 t.column("performedBy", .text)
                 t.column("cost", .double)
                 t.column("notes", .text)
+            }
+
+            try db.create(table: "auditLog", ifNotExists: true) { t in
+                t.column("id", .text).primaryKey()
+                t.column("action", .text).notNull()
+                t.column("details", .text).notNull()
+                t.column("timestamp", .datetime).notNull()
             }
         }
     }

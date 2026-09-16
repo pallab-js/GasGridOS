@@ -345,6 +345,11 @@ struct AddPipelineSheet: View {
 
             Form {
                 TextField("Pipeline Name", text: $name)
+                    .onChange(of: name) { _, newValue in
+                        if newValue.count > 100 {
+                            name = String(newValue.prefix(100))
+                        }
+                    }
 
                 Picker("Start Station", selection: $selectedStartStation) {
                     Text("Select...").tag(nil as NetworkStation?)

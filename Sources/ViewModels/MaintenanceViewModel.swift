@@ -161,6 +161,7 @@ final class MaintenanceViewModel: ObservableObject {
             try maintenanceRepo.delete(log)
             maintenanceLogs.removeAll { $0.id == log.id }
             categorizeMaintenance()
+            DatabaseManager.shared.logAuditEvent("DELETE_MAINTENANCE", details: "Deleted maintenance task '\(log.description)' (ID: \(log.id.uuidString))")
         } catch {
             errorMessage = "Failed to delete: \(error.localizedDescription)"
         }

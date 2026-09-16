@@ -53,6 +53,7 @@ final class ValveViewModel: ObservableObject {
         do {
             try valveRepo.delete(valve)
             valves.removeAll { $0.id == valve.id }
+            DatabaseManager.shared.logAuditEvent("DELETE_VALVE", details: "Deleted valve '\(valve.name)' (ID: \(valve.id.uuidString))")
         } catch {
             errorMessage = "Failed to delete valve: \(error.localizedDescription)"
         }
