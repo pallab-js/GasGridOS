@@ -5,7 +5,6 @@ struct AssetListView: View {
     @State private var showingAddStation = false
     @State private var showingAddPipeline = false
     @State private var selectedStation: NetworkStation?
-    @State private var selectedPipeline: Pipeline?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -30,13 +29,21 @@ struct AssetListView: View {
             await viewModel.loadData()
         }
         .sheet(isPresented: $showingAddStation) {
-            AddStationSheet { _ in
-                Task { await viewModel.loadData() }
+            AddStationSheet { station in
+                do {
+                    try viewModel.addStation(station)
+                } catch {
+                    viewModel.errorMessage = "Failed to add station: \(error.localizedDescription)"
+                }
             }
         }
         .sheet(isPresented: $showingAddPipeline) {
-            AddPipelineSheet(stations: viewModel.stations) { _ in
-                Task { await viewModel.loadData() }
+            AddPipelineSheet(stations: viewModel.stations) { pipeline in
+                do {
+                    try viewModel.addPipeline(pipeline)
+                } catch {
+                    viewModel.errorMessage = "Failed to add pipeline: \(error.localizedDescription)"
+                }
             }
         }
         .sheet(item: $selectedStation) { station in

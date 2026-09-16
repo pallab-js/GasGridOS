@@ -7,6 +7,7 @@ final class SampleDataSeeder: @unchecked Sendable {
     private let pipelineRepo = PipelineRepository()
     private let sensorRepo = SensorRepository()
     private let alertRepo = AlertRepository()
+    private let valveRepo = ValveRepository()
 
     private init() {}
 
@@ -223,5 +224,46 @@ final class SampleDataSeeder: @unchecked Sendable {
         try alertRepo.insert(alert2)
         try alertRepo.insert(alert3)
         try alertRepo.insert(alert4)
+
+        let valve1 = Valve(
+            name: "Main Gate Valve",
+            stationId: station1.id,
+            valveType: .gate,
+            status: .open,
+            position: 1.0,
+            diameter: 300
+        )
+
+        let valve2 = Valve(
+            name: "North Butterfly Valve",
+            stationId: station2.id,
+            valveType: .butterfly,
+            status: .closed,
+            position: 0,
+            diameter: 200
+        )
+
+        let valve3 = Valve(
+            name: "South Ball Valve",
+            stationId: station3.id,
+            valveType: .ball,
+            status: .partiallyOpen,
+            position: 0.5,
+            diameter: 150
+        )
+
+        let valve4 = Valve(
+            name: "West Check Valve",
+            stationId: station5.id,
+            valveType: .check,
+            status: .open,
+            position: 1.0,
+            diameter: 100
+        )
+
+        try valveRepo.insert(valve1)
+        try valveRepo.insert(valve2)
+        try valveRepo.insert(valve3)
+        try valveRepo.insert(valve4)
     }
 }

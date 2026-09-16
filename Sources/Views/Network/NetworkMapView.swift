@@ -28,8 +28,10 @@ struct NetworkMapView: View {
         }
         .sheet(isPresented: $showingAddStation) {
             AddStationSheet { station in
-                Task {
-                    await viewModel.loadData()
+                do {
+                    try viewModel.addStation(station)
+                } catch {
+                    viewModel.errorMessage = "Failed to add station: \(error.localizedDescription)"
                 }
             }
         }

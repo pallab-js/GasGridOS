@@ -48,9 +48,23 @@ final class ChartViewModel: ObservableObject {
             return
         }
 
-        pressureHistory = generateSampleData(startDate: startDate, endDate: now, baseValue: 4.0, variance: 0.5, timeRange: range)
-        flowRateHistory = generateSampleData(startDate: startDate, endDate: now, baseValue: 120.0, variance: 20.0, timeRange: range)
-        temperatureHistory = generateSampleData(startDate: startDate, endDate: now, baseValue: 25.0, variance: 5.0, timeRange: range)
+        let stations = (try? StationRepository().fetchAll()) ?? []
+
+        if let targetStationId = stationId {
+            pressureHistory = await HistoryGenerator.shared.fetchChartData(for: targetStationId, type: .pressure, timeRange: range)
+            flowRateHistory = await HistoryGenerator.shared.fetchChartData(for: targetStationId, type: .flowRate, timeRange: range)
+            temperatureHistory = await HistoryGenerator.shared.fetchChartData(for: targetStationId, type: .temperature, timeRange: range)
+        } else if let firstStation = stations.first {
+            pressureHistory = await HistoryGenerator.shared.fetchChartData(for: firstStation.id, type: .pressure, timeRange: range)
+            flowRateHistory = await HistoryGenerator.shared.fetchChartData(for: firstStation.id, type: .flowRate, timeRange: range)
+            temperatureHistory = await HistoryGenerator.shared.fetchChartData(for: firstStation.id, type: .temperature, timeRange: range)
+        }
+
+        if pressureHistory.isEmpty {
+            pressureHistory = generateSampleData(startDate: startDate, endDate: now, baseValue: 4.0, variance: 0.5, timeRange: range)
+            flowRateHistory = generateSampleData(startDate: startDate, endDate: now, baseValue: 120.0, variance: 20.0, timeRange: range)
+            temperatureHistory = generateSampleData(startDate: startDate, endDate: now, baseValue: 25.0, variance: 5.0, timeRange: range)
+        }
 
         isLoading = false
     }

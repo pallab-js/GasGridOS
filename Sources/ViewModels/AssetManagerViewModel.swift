@@ -63,4 +63,14 @@ final class AssetManagerViewModel: ObservableObject {
         try pipelineRepo.delete(pipeline)
         pipelines.removeAll { $0.id == pipeline.id }
     }
+
+    func addStation(_ station: NetworkStation) throws {
+        try stationRepo.insert(station)
+        stations.append(station)
+    }
+
+    func addPipeline(_ pipeline: Pipeline) throws {
+        try pipelineRepo.insert(pipeline)
+        pipelines.append(pipeline)
+    }
 }

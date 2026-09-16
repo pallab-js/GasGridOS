@@ -10,6 +10,8 @@ final class MaintenanceViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var selectedFilter: MaintenanceFilter = .all
 
+    private let maintenanceRepo = MaintenanceRepository()
+
     enum MaintenanceFilter: String, CaseIterable {
         case all = "All"
         case upcoming = "Upcoming"
@@ -33,7 +35,11 @@ final class MaintenanceViewModel: ObservableObject {
     func loadData() async {
         isLoading = true
 
-        maintenanceLogs = fetchSampleData()
+        do {
+            maintenanceLogs = try maintenanceRepo.fetchAll()
+        } catch {
+            maintenanceLogs = fetchSampleData()
+        }
         categorizeMaintenance()
 
         isLoading = false
@@ -115,26 +121,48 @@ final class MaintenanceViewModel: ObservableObject {
     }
 
     func addMaintenanceLog(_ log: MaintenanceLog) {
-        maintenanceLogs.append(log)
-        categorizeMaintenance()
+        do {
+            try maintenanceRepo.insert(log)
+            maintenanceLogs.append(log)
+            categorizeMaintenance()
+        } catch {
+            errorMessage = "Failed to save: \(error.localizedDescription)"
+        }
     }
 
     func updateMaintenanceLog(_ log: MaintenanceLog) {
-        if let index = maintenanceLogs.firstIndex(where: { $0.id == log.id }) {
-            maintenanceLogs[index] = log
-            categorizeMaintenance()
+        do {
+            try maintenanceRepo.update(log)
+            if let index = maintenanceLogs.firstIndex(where: { $0.id == log.id }) {
+                maintenanceLogs[index] = log
+                categorizeMaintenance()
+            }
+        } catch {
+            errorMessage = "Failed to update: \(error.localizedDescription)"
         }
     }
 
     func completeMaintenance(_ log: MaintenanceLog) {
-        if let index = maintenanceLogs.firstIndex(where: { $0.id == log.id }) {
-            maintenanceLogs[index].completedDate = Date()
-            categorizeMaintenance()
+        var updated = log
+        updated.completedDate = Date()
+        do {
+            try maintenanceRepo.update(updated)
+            if let index = maintenanceLogs.firstIndex(where: { $0.id == log.id }) {
+                maintenanceLogs[index].completedDate = Date()
+                categorizeMaintenance()
+            }
+        } catch {
+            errorMessage = "Failed to complete: \(error.localizedDescription)"
         }
     }
 
     func deleteMaintenanceLog(_ log: MaintenanceLog) {
-        maintenanceLogs.removeAll { $0.id == log.id }
-        categorizeMaintenance()
+        do {
+            try maintenanceRepo.delete(log)
+            maintenanceLogs.removeAll { $0.id == log.id }
+            categorizeMaintenance()
+        } catch {
+            errorMessage = "Failed to delete: \(error.localizedDescription)"
+        }
     }
 }

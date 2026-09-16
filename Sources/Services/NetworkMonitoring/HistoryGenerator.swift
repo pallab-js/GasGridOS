@@ -5,6 +5,7 @@ final class HistoryGenerator {
     static let shared = HistoryGenerator()
 
     private let historyRepo = DataHistoryRepository()
+    private let sensorRepo = SensorRepository()
 
     private init() {}
 
@@ -16,10 +17,15 @@ final class HistoryGenerator {
         var readings: [SensorReading] = []
 
         for station in stations {
+            let sensors = (try? sensorRepo.fetchByStation(station.id)) ?? []
+            let pressureSensorId = sensors.first(where: { $0.sensorType == .pressure })?.id ?? station.id
+            let flowSensorId = sensors.first(where: { $0.sensorType == .flowRate })?.id ?? station.id
+            let tempSensorId = sensors.first(where: { $0.sensorType == .temperature })?.id ?? station.id
+
             var currentDate = startDate
             while currentDate <= now {
                 let pressureReading = createReading(
-                    sensorId: station.id,
+                    sensorId: pressureSensorId,
                     type: .pressure,
                     baseValue: station.pressure,
                     variance: 0.3,
@@ -28,7 +34,7 @@ final class HistoryGenerator {
                 readings.append(pressureReading)
 
                 let flowReading = createReading(
-                    sensorId: station.id,
+                    sensorId: flowSensorId,
                     type: .flowRate,
                     baseValue: station.flowRate,
                     variance: 10.0,
@@ -37,7 +43,7 @@ final class HistoryGenerator {
                 readings.append(flowReading)
 
                 let tempReading = createReading(
-                    sensorId: station.id,
+                    sensorId: tempSensorId,
                     type: .temperature,
                     baseValue: station.temperature,
                     variance: 2.0,

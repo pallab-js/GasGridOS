@@ -9,7 +9,6 @@ struct SettingsView: View {
     @AppStorage("autoRefresh") private var autoRefresh = true
     @State private var selectedTab: SettingsTab = .general
     @State private var showingClearAlert = false
-    @State private var showingImportPicker = false
     @State private var containerWidth: CGFloat = 600
     @StateObject private var notificationService = NotificationService.shared
     @StateObject private var performanceMonitor = PerformanceMonitor.shared
@@ -341,12 +340,6 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-    }
-
-    private func requestNotificationPermission() {
-        Task {
-            await notificationService.requestAuthorization()
-        }
     }
 
     private func playTestSound() {

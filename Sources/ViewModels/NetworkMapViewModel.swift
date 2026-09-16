@@ -35,6 +35,12 @@ final class NetworkMapViewModel: ObservableObject {
         selectedStation = nil
     }
 
+    func addStation(_ station: NetworkStation) throws {
+        try stationRepo.insert(station)
+        stations.append(station)
+        computePositions()
+    }
+
     private func computePositions() {
         guard !stations.isEmpty else {
             stationPositions = [:]

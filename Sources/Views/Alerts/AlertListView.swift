@@ -3,7 +3,6 @@ import SwiftUI
 struct AlertListView: View {
     @StateObject private var viewModel = AlertViewModel()
     @State private var selectedAlert: Alert?
-    @State private var showingDetail = false
     @State private var alertToDelete: Alert?
 
     var body: some View {
