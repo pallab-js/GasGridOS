@@ -221,7 +221,12 @@ struct SettingsView: View {
                     }
                 }
 
-                Button(action: { showingImportPicker = true }) {
+                Button(action: {
+                    NSWorkspace.shared.open(
+                        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+                            .appendingPathComponent("GasGridManager")
+                    )
+                }) {
                     HStack {
                         Image(systemName: "square.and.arrow.down")
                         Text("Import Data")
@@ -349,7 +354,9 @@ struct SettingsView: View {
     }
 
     private func exportAllData() {
-        NSWorkspace.shared.open(URL(fileURLWithPath: "/"))
+        let exportURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            .appendingPathComponent("GasGridManager")
+        NSWorkspace.shared.open(exportURL)
     }
 
     private func clearAllData() {

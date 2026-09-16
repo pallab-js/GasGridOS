@@ -4,7 +4,6 @@ struct ExportView: View {
     @StateObject private var viewModel = ExportViewModel()
     @State private var selectedFormat: ExportViewModel.ExportFormat = .csv
     @State private var selectedType: ExportViewModel.ExportType = .all
-    @State private var showingPreview = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -107,11 +106,6 @@ struct ExportView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(viewModel.isExporting)
-
-                Button(action: { showingPreview = true }) {
-                    Label("Preview", systemImage: "eye")
-                }
-                .buttonStyle(.bordered)
             }
         }
         .padding()

@@ -48,6 +48,9 @@ struct ReportListView: View {
         .sheet(item: $selectedReport) { report in
             ReportDetailView(report: report, reportType: selectedReportType)
         }
+        .sheet(isPresented: $showingExport) {
+            ExportView()
+        }
     }
 
     private var headerSection: some View {

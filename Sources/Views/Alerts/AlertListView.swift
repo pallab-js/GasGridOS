@@ -33,7 +33,10 @@ struct AlertListView: View {
                 viewModel.acknowledgeAlert(alert, notes: notes)
             }
         }
-        .alert("Delete Alert", isPresented: .constant(alertToDelete != nil)) {
+        .alert("Delete Alert", isPresented: Binding(
+            get: { alertToDelete != nil },
+            set: { if !$0 { alertToDelete = nil } }
+        )) {
             Button("Cancel", role: .cancel) { alertToDelete = nil }
             Button("Delete", role: .destructive) {
                 if let alert = alertToDelete {

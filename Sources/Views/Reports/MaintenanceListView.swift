@@ -43,7 +43,10 @@ struct MaintenanceListView: View {
                 viewModel.updateMaintenanceLog(updatedLog)
             }
         }
-        .alert("Delete Task", isPresented: .constant(logToDelete != nil)) {
+        .alert("Delete Task", isPresented: Binding(
+            get: { logToDelete != nil },
+            set: { if !$0 { logToDelete = nil } }
+        )) {
             Button("Cancel", role: .cancel) { logToDelete = nil }
             Button("Delete", role: .destructive) {
                 if let log = logToDelete {

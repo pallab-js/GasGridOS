@@ -34,7 +34,10 @@ struct ValveListView: View {
                 viewModel.updateValve(updatedValve)
             }
         }
-        .alert("Delete Valve", isPresented: .constant(valveToDelete != nil)) {
+        .alert("Delete Valve", isPresented: Binding(
+            get: { valveToDelete != nil },
+            set: { if !$0 { valveToDelete = nil } }
+        )) {
             Button("Cancel", role: .cancel) { valveToDelete = nil }
             Button("Delete", role: .destructive) {
                 if let valve = valveToDelete {
