@@ -88,7 +88,7 @@ struct ContentView: View {
     private var detailView: some View {
         switch selectedTab {
         case .dashboard:
-            DashboardView()
+            DashboardView(selectedTab: $selectedTab)
         case .network:
             NetworkMapView()
         case .assets:

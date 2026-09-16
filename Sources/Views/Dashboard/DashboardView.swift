@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct DashboardView: View {
+    @Binding var selectedTab: SidebarView.SidebarTab
     @StateObject private var viewModel = DashboardViewModel()
     @StateObject private var chartViewModel = ChartViewModel()
     @State private var selectedTimeRange: ChartViewModel.TimeRange = .lastHour
@@ -237,7 +238,7 @@ struct DashboardView: View {
     }
 
     private var alertSummarySection: some View {
-        AlertSummaryView(alerts: viewModel.alerts)
+        AlertSummaryView(alerts: viewModel.alerts, selectedTab: $selectedTab)
     }
 
     private var systemStatusSection: some View {

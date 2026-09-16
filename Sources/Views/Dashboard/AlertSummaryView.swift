@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AlertSummaryView: View {
     let alerts: [Alert]
+    @Binding var selectedTab: SidebarView.SidebarTab
     var maxDisplay: Int = 5
 
     var body: some View {
@@ -10,9 +11,10 @@ struct AlertSummaryView: View {
                 Text("Recent Alerts")
                     .font(.headline)
                 Spacer()
-                NavigationLink("View All") {
-                    AlertListView()
+                Button("View All") {
+                    selectedTab = .alerts
                 }
+                .buttonStyle(.link)
             }
 
             if alerts.isEmpty {
