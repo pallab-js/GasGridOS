@@ -1,5 +1,8 @@
 import Foundation
 import SwiftUI
+import os.log
+
+private let logger = Logger(subsystem: "com.gasgrid", category: "Export")
 
 @MainActor
 final class ExportViewModel: ObservableObject {
@@ -119,10 +122,18 @@ final class ExportViewModel: ObservableObject {
             exportComplete = true
 
         } catch {
-            print("Export error: \(error)")
+            logger.error("Export failed: \(error.localizedDescription)")
         }
 
         isExporting = false
+    }
+
+    private func escapeCSV(_ field: String) -> String {
+        if field.contains(",") || field.contains("\"") || field.contains("\n") || field.contains("\r") {
+            let escaped = field.replacingOccurrences(of: "\"", with: "\"\"")
+            return "\"\(escaped)\""
+        }
+        return field
     }
 
     private func formatStations(_ stations: [NetworkStation], format: ExportFormat) -> Data {
@@ -130,7 +141,7 @@ final class ExportViewModel: ObservableObject {
         case .csv:
             var csv = "Name,Type,Status,Pressure (bar),Flow Rate (m³/h),Temperature (°C)\n"
             for station in stations {
-                csv += "\(station.name),\(station.stationType.rawValue),\(station.status.rawValue),\(station.pressure),\(station.flowRate),\(station.temperature)\n"
+                csv += "\(escapeCSV(station.name)),\(escapeCSV(station.stationType.rawValue)),\(escapeCSV(station.status.rawValue)),\(station.pressure),\(station.flowRate),\(station.temperature)\n"
             }
             return csv.data(using: .utf8) ?? Data()
         case .json:
@@ -147,7 +158,7 @@ final class ExportViewModel: ObservableObject {
         case .csv:
             var csv = "Name,Material,Diameter (mm),Length (km),Pressure (bar)\n"
             for pipeline in pipelines {
-                csv += "\(pipeline.name),\(pipeline.material.rawValue),\(pipeline.diameter),\(pipeline.length),\(pipeline.pressure)\n"
+                csv += "\(escapeCSV(pipeline.name)),\(escapeCSV(pipeline.material.rawValue)),\(pipeline.diameter),\(pipeline.length),\(pipeline.pressure)\n"
             }
             return csv.data(using: .utf8) ?? Data()
         case .json:
@@ -164,7 +175,7 @@ final class ExportViewModel: ObservableObject {
         case .csv:
             var csv = "Title,Severity,Message,Timestamp,Acknowledged\n"
             for alert in alerts {
-                csv += "\(alert.title),\(alert.severity.rawValue),\(alert.message),\(alert.timestamp),\(alert.isAcknowledged)\n"
+                csv += "\(escapeCSV(alert.title)),\(escapeCSV(alert.severity.rawValue)),\(escapeCSV(alert.message)),\(alert.timestamp),\(alert.isAcknowledged)\n"
             }
             return csv.data(using: .utf8) ?? Data()
         case .json:
@@ -184,17 +195,17 @@ final class ExportViewModel: ObservableObject {
             csv += "STATIONS\n"
             csv += "Name,Type,Status,Pressure\n"
             for station in stations {
-                csv += "\(station.name),\(station.stationType.rawValue),\(station.status.rawValue),\(station.pressure)\n"
+                csv += "\(escapeCSV(station.name)),\(escapeCSV(station.stationType.rawValue)),\(escapeCSV(station.status.rawValue)),\(station.pressure)\n"
             }
             csv += "\nPIPELINES\n"
             csv += "Name,Material,Length\n"
             for pipeline in pipelines {
-                csv += "\(pipeline.name),\(pipeline.material.rawValue),\(pipeline.length)\n"
+                csv += "\(escapeCSV(pipeline.name)),\(escapeCSV(pipeline.material.rawValue)),\(pipeline.length)\n"
             }
             csv += "\nALERTS\n"
             csv += "Title,Severity,Acknowledged\n"
             for alert in alerts {
-                csv += "\(alert.title),\(alert.severity.rawValue),\(alert.isAcknowledged)\n"
+                csv += "\(escapeCSV(alert.title)),\(escapeCSV(alert.severity.rawValue)),\(alert.isAcknowledged)\n"
             }
             return csv.data(using: .utf8) ?? Data()
         case .json:

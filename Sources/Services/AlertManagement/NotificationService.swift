@@ -1,5 +1,8 @@
 import Foundation
 @preconcurrency import UserNotifications
+import os.log
+
+private let logger = Logger(subsystem: "com.gasgrid", category: "Notification")
 
 @MainActor
 final class NotificationService: ObservableObject {
@@ -20,7 +23,7 @@ final class NotificationService: ObservableObject {
                 .requestAuthorization(options: [.alert, .sound, .badge])
             authorizationStatus = granted ? .authorized : .denied
         } catch {
-            print("Notification authorization error: \(error)")
+            logger.error("Notification authorization error: \(error.localizedDescription)")
         }
     }
 
@@ -53,7 +56,7 @@ final class NotificationService: ObservableObject {
 
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
-                print("Error sending notification: \(error)")
+                logger.error("Error sending notification: \(error.localizedDescription)")
             }
         }
     }

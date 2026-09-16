@@ -401,10 +401,14 @@ struct SettingsView: View {
         guard let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else { return }
         let dbPath = appSupport.appendingPathComponent("GasGridManager/gasgrid.sqlite")
         let backupPath = appSupport.appendingPathComponent("GasGridManager/gasgrid_backup_\(Int(Date().timeIntervalSince1970)).sqlite")
+        
+        DatabaseManager.shared.closeDatabase()
         do {
             try fileManager.copyItem(at: dbPath, to: backupPath)
+            try DatabaseManager.shared.openDatabase()
         } catch {
             settingsError = "Failed to create backup: \(error.localizedDescription)"
+            try? DatabaseManager.shared.openDatabase()
         }
     }
 }

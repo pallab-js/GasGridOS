@@ -1,4 +1,7 @@
 import Foundation
+import os.log
+
+private let logger = Logger(subsystem: "com.gasgrid", category: "HistoryGenerator")
 
 @MainActor
 final class HistoryGenerator {
@@ -58,7 +61,7 @@ final class HistoryGenerator {
         do {
             try historyRepo.insertBatch(readings)
         } catch {
-            print("Error generating history: \(error)")
+            logger.error("Error generating history: \(error.localizedDescription)")
         }
     }
 
@@ -108,7 +111,7 @@ final class HistoryGenerator {
                 )
             }
         } catch {
-            print("Error fetching chart data: \(error)")
+            logger.error("Error fetching chart data: \(error.localizedDescription)")
             return []
         }
     }

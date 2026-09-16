@@ -170,12 +170,8 @@ final class PDFReportGenerator {
         return """
         COST ANALYSIS
         
-        Monthly Operating Cost: $12,450
-        Maintenance Cost: $1,750
-        Energy Cost: $8,200
-        Labor Cost: $2,500
-        
-        Budget Variance: -2.3% (Under Budget)
+        Cost data is calculated from maintenance records.
+        Please refer to the Maintenance section for detailed cost tracking.
         
         """
     }

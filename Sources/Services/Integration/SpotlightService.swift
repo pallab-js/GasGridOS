@@ -1,6 +1,9 @@
 import Foundation
 import CoreSpotlight
 import UniformTypeIdentifiers
+import os.log
+
+private let logger = Logger(subsystem: "com.gasgrid", category: "Spotlight")
 
 @MainActor
 @preconcurrency
@@ -26,7 +29,7 @@ final class SpotlightService {
 
         CSSearchableIndex.default().indexSearchableItems(items) { error in
             if let error = error {
-                print("Spotlight indexing error: \(error)")
+                logger.error("Spotlight station indexing error: \(error.localizedDescription)")
             }
         }
     }
@@ -35,7 +38,7 @@ final class SpotlightService {
         let items: [CSSearchableItem] = alerts.map { alert in
             let attributeSet = CSSearchableItemAttributeSet(contentType: .data)
             attributeSet.title = alert.title
-            attributeSet.contentDescription = alert.message
+            attributeSet.contentDescription = "\(alert.severity.rawValue) alert"
 
             return CSSearchableItem(
                 uniqueIdentifier: "alert-\(alert.id.uuidString)",
@@ -46,7 +49,7 @@ final class SpotlightService {
 
         CSSearchableIndex.default().indexSearchableItems(items) { error in
             if let error = error {
-                print("Spotlight alert indexing error: \(error)")
+                logger.error("Spotlight alert indexing error: \(error.localizedDescription)")
             }
         }
     }
@@ -66,7 +69,7 @@ final class SpotlightService {
 
         CSSearchableIndex.default().indexSearchableItems(items) { error in
             if let error = error {
-                print("Spotlight pipeline indexing error: \(error)")
+                logger.error("Spotlight pipeline indexing error: \(error.localizedDescription)")
             }
         }
     }
@@ -74,7 +77,7 @@ final class SpotlightService {
     func removeIndex(for identifier: String) {
         CSSearchableIndex.default().deleteSearchableItems(withIdentifiers: [identifier]) { error in
             if let error = error {
-                print("Spotlight removal error: \(error)")
+                logger.error("Spotlight removal error: \(error.localizedDescription)")
             }
         }
     }
@@ -82,7 +85,7 @@ final class SpotlightService {
     func clearAllIndices() {
         CSSearchableIndex.default().deleteAllSearchableItems { error in
             if let error = error {
-                print("Spotlight clear error: \(error)")
+                logger.error("Spotlight clear error: \(error.localizedDescription)")
             }
         }
     }
