@@ -129,4 +129,4 @@ The app includes a real-time simulator that:
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-Copyright (c) 2026 Pallab Chakraborty
+Copyright (c) 2026 Pallab Jyoti Sonowal
