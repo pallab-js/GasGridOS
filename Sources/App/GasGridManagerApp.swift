@@ -31,7 +31,6 @@ struct GasGridManagerApp: App {
                     simulator.stopSimulation()
                 }
         }
-        .windowStyle(.titleBar)
         .windowToolbarStyle(.unified(showsTitle: true))
         .defaultSize(width: 1100, height: 800)
 

@@ -127,12 +127,14 @@ struct AssetListView: View {
             LazyVStack(spacing: 0) {
                 if viewModel.selectedFilter == .all || viewModel.selectedFilter == .stations {
                     assetSection(title: "Stations", count: viewModel.filteredStations.count) {
+                        let lastId = viewModel.filteredStations.last?.id
                         ForEach(viewModel.filteredStations) { station in
                             Button(action: { selectedStation = station }) {
                                 StationRowView(station: station)
                             }
                             .buttonStyle(.plain)
-                            if station.id != viewModel.filteredStations.last?.id {
+                            .accessibilityLabel("View \(station.name) details")
+                            if station.id != lastId {
                                 Divider().padding(.leading, 48)
                             }
                         }
@@ -141,9 +143,10 @@ struct AssetListView: View {
 
                 if viewModel.selectedFilter == .all || viewModel.selectedFilter == .pipelines {
                     assetSection(title: "Pipelines", count: viewModel.filteredPipelines.count) {
+                        let lastId = viewModel.filteredPipelines.last?.id
                         ForEach(viewModel.filteredPipelines) { pipeline in
                             PipelineRowView(pipeline: pipeline)
-                            if pipeline.id != viewModel.filteredPipelines.last?.id {
+                            if pipeline.id != lastId {
                                 Divider().padding(.leading, 48)
                             }
                         }
@@ -152,9 +155,10 @@ struct AssetListView: View {
 
                 if viewModel.selectedFilter == .all || viewModel.selectedFilter == .sensors {
                     assetSection(title: "Sensors", count: viewModel.sensors.count) {
+                        let lastId = viewModel.sensors.last?.id
                         ForEach(viewModel.sensors) { sensor in
                             SensorRowView(sensor: sensor)
-                            if sensor.id != viewModel.sensors.last?.id {
+                            if sensor.id != lastId {
                                 Divider().padding(.leading, 48)
                             }
                         }
@@ -197,6 +201,7 @@ struct StationRowView: View {
             Image(systemName: station.stationType.icon)
                 .foregroundColor(.blue)
                 .frame(width: 24)
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading) {
                 Text(station.name)

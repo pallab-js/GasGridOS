@@ -9,6 +9,8 @@ struct SettingsView: View {
     @AppStorage("autoRefresh") private var autoRefresh = true
     @State private var selectedTab: SettingsTab = .general
     @State private var showingClearAlert = false
+    @State private var showingClearNotificationsAlert = false
+    @State private var settingsError: String?
     @State private var containerWidth: CGFloat = 600
     @StateObject private var notificationService = NotificationService.shared
     @StateObject private var performanceMonitor = PerformanceMonitor.shared
@@ -86,6 +88,22 @@ struct SettingsView: View {
             }
         } message: {
             Text("This will remove all historical data. This action cannot be undone.")
+        }
+        .alert("Clear Notifications", isPresented: $showingClearNotificationsAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Clear", role: .destructive) {
+                notificationService.clearAllNotifications()
+            }
+        } message: {
+            Text("This will clear all notifications. This action cannot be undone.")
+        }
+        .alert("Error", isPresented: .init(
+            get: { settingsError != nil },
+            set: { if !$0 { settingsError = nil } }
+        )) {
+            Button("OK") { settingsError = nil }
+        } message: {
+            Text(settingsError ?? "")
         }
     }
 
@@ -192,7 +210,7 @@ struct SettingsView: View {
 
             Section("Actions") {
                 Button(action: {
-                    notificationService.clearAllNotifications()
+                    showingClearNotificationsAlert = true
                 }) {
                     Label("Clear All Notifications", systemImage: "trash")
                 }
@@ -227,8 +245,8 @@ struct SettingsView: View {
                     )
                 }) {
                     HStack {
-                        Image(systemName: "square.and.arrow.down")
-                        Text("Import Data")
+                        Image(systemName: "folder")
+                        Text("Open Data Folder")
                     }
                 }
 
@@ -265,14 +283,14 @@ struct SettingsView: View {
                 HStack {
                     Text("Version")
                     Spacer()
-                    Text("1.0.0")
+                    Text(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0")
                         .foregroundColor(.secondary)
                 }
 
                 HStack {
                     Text("Build")
                     Spacer()
-                    Text("1")
+                    Text(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1")
                         .foregroundColor(.secondary)
                 }
 
@@ -358,7 +376,7 @@ struct SettingsView: View {
             try DatabaseManager.shared.openDatabase()
             try SampleDataSeeder.shared.seedSampleData()
         } catch {
-            print("Failed to reset database: \(error)")
+            settingsError = "Failed to reset database: \(error.localizedDescription)"
         }
     }
 
@@ -383,6 +401,10 @@ struct SettingsView: View {
         guard let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else { return }
         let dbPath = appSupport.appendingPathComponent("GasGridManager/gasgrid.sqlite")
         let backupPath = appSupport.appendingPathComponent("GasGridManager/gasgrid_backup_\(Int(Date().timeIntervalSince1970)).sqlite")
-        try? fileManager.copyItem(at: dbPath, to: backupPath)
+        do {
+            try fileManager.copyItem(at: dbPath, to: backupPath)
+        } catch {
+            settingsError = "Failed to create backup: \(error.localizedDescription)"
+        }
     }
 }

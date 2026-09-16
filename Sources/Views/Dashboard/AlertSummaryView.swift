@@ -15,6 +15,7 @@ struct AlertSummaryView: View {
                     selectedTab = .alerts
                 }
                 .buttonStyle(.link)
+                .accessibilityHint("Navigate to alerts view")
             }
 
             if alerts.isEmpty {

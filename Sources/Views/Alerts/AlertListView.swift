@@ -69,7 +69,9 @@ struct AlertListView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                     if viewModel.criticalCount > 0 {
-                        Text("•")
+                        Text("-")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                         Text("\(viewModel.criticalCount) critical")
                             .font(.caption)
                             .foregroundColor(.red)
@@ -128,6 +130,7 @@ struct AlertListView: View {
     private var alertList: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
+                let lastId = viewModel.filteredAlerts.last?.id
                 ForEach(viewModel.filteredAlerts) { alert in
                     AlertRowView(
                         alert: alert,
@@ -135,7 +138,9 @@ struct AlertListView: View {
                         onDelete: { alertToDelete = alert }
                     )
                     .onTapGesture { selectedAlert = alert }
-                    if alert.id != viewModel.filteredAlerts.last?.id {
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityHint("View alert details")
+                    if alert.id != lastId {
                         Divider().padding(.leading, 48)
                     }
                 }
@@ -171,6 +176,8 @@ struct FilterChip: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
@@ -220,6 +227,7 @@ struct AlertRowView: View {
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
+                    .accessibilityLabel("Acknowledge alert")
                 }
 
                 Menu {
@@ -231,6 +239,7 @@ struct AlertRowView: View {
                         .foregroundColor(.secondary)
                 }
                 .menuStyle(.borderlessButton)
+                .accessibilityLabel("More actions")
             }
         }
         .padding(.horizontal)

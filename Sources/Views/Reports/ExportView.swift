@@ -45,6 +45,7 @@ struct ExportView: View {
                     Label("Open Folder", systemImage: "folder")
                 }
                 .buttonStyle(.bordered)
+                .accessibilityHint("Open the folder containing the exported file")
             }
         }
         .padding()
@@ -122,27 +123,40 @@ struct ExportView: View {
                     .foregroundColor(.secondary)
             }
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 4) {
-                    ForEach(viewModel.previewData.prefix(5), id: \.self) { item in
-                        Text(item)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .padding(.vertical, 2)
-                    }
-                    if viewModel.previewData.count > 5 {
-                        Text("... and \(viewModel.previewData.count - 5) more records")
-                            .font(.caption)
-                            .foregroundColor(.blue)
-                    }
+            if viewModel.previewData.isEmpty {
+                VStack(spacing: 8) {
+                    Image(systemName: "doc.text")
+                        .font(.title2)
+                        .foregroundColor(.secondary)
+                    Text("No data to preview")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity)
+                .padding()
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(viewModel.previewData.prefix(5), id: \.self) { item in
+                            Text(item)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .padding(.vertical, 2)
+                        }
+                        if viewModel.previewData.count > 5 {
+                            Text("... and \(viewModel.previewData.count - 5) more records")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(height: 100)
             }
-            .frame(height: 100)
-            .padding(8)
-            .background(Color(NSColor.textBackgroundColor))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
         }
+        .padding(8)
+        .background(Color(NSColor.controlBackgroundColor))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
         .padding()
     }
 

@@ -108,6 +108,7 @@ struct ValveListView: View {
     private var valveList: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
+                let lastId = viewModel.filteredValves.last?.id
                 ForEach(viewModel.filteredValves) { valve in
                     Button(action: { selectedValve = valve }) {
                         ValveRowView(valve: valve, onDelete: {
@@ -115,7 +116,8 @@ struct ValveListView: View {
                         })
                     }
                     .buttonStyle(.plain)
-                    if valve.id != viewModel.filteredValves.last?.id {
+                    .accessibilityLabel("View \(valve.name) details")
+                    if valve.id != lastId {
                         Divider().padding(.leading, 48)
                     }
                 }
@@ -169,10 +171,12 @@ struct ValveRowView: View {
             }
             .menuStyle(.borderlessButton)
             .frame(width: 24)
+            .accessibilityLabel("More actions")
 
             Image(systemName: "chevron.right")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .accessibilityHidden(true)
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
@@ -215,6 +219,7 @@ struct ValveDetailView: View {
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Close")
             }
 
             Divider()
@@ -282,6 +287,7 @@ struct ValveDetailView: View {
                     dismiss()
                 }
                 .buttonStyle(.borderedProminent)
+                .disabled(name.isEmpty)
             }
         }
         .padding()

@@ -60,6 +60,7 @@ struct AlertDetailView: View {
                     .foregroundColor(.secondary)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Close")
         }
     }
 
@@ -115,8 +116,13 @@ struct AlertDetailView: View {
                     onAcknowledge(notes.isEmpty ? nil : notes)
                     dismiss()
                 }) {
-                    Label("Acknowledge Alert", systemImage: "checkmark.circle.fill")
-                        .frame(maxWidth: .infinity)
+                    if isAcknowledging {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                    } else {
+                        Label("Acknowledge Alert", systemImage: "checkmark.circle.fill")
+                            .frame(maxWidth: .infinity)
+                    }
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(isAcknowledging)

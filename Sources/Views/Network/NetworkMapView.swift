@@ -93,6 +93,7 @@ struct NetworkMapView: View {
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
+            .accessibilityLabel("Zoom out")
 
             Text("\(Int(zoomLevel * 100))%")
                 .font(.caption)
@@ -103,12 +104,14 @@ struct NetworkMapView: View {
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
+            .accessibilityLabel("Zoom in")
 
             Button(action: { withAnimation { zoomLevel = 1.0 } }) {
                 Image(systemName: "arrow.up.left.and.arrow.down.right")
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
+            .accessibilityLabel("Reset zoom")
         }
     }
 
@@ -163,7 +166,6 @@ struct NetworkMapView: View {
                 }
             }
             .frame(width: 800 * zoomLevel, height: 600 * zoomLevel)
-            .scaleEffect(zoomLevel)
         }
         .sheet(item: $viewModel.selectedStation) { station in
             StationDetailView(station: station)
@@ -201,6 +203,7 @@ struct StationMarkerView: View {
         }
         .buttonStyle(.plain)
         .position(x: position?.x ?? 0, y: position?.y ?? 0)
+        .accessibilityLabel("\(station.name), \(station.status.rawValue)")
     }
 }
 

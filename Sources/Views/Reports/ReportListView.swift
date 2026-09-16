@@ -94,6 +94,7 @@ struct ReportListView: View {
                             ReportCard(report: report)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel("View \(report.title) report")
                     }
                 }
                 .padding()
@@ -174,6 +175,7 @@ struct ReportDetailView: View {
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Close")
             }
 
             Divider()
@@ -207,6 +209,14 @@ struct ReportDetailView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text("Report saved to: \(viewModel.exportedFilePath)")
+        }
+        .alert("Export Error", isPresented: .init(
+            get: { viewModel.errorMessage != nil },
+            set: { if !$0 { viewModel.errorMessage = nil } }
+        )) {
+            Button("OK") { viewModel.errorMessage = nil }
+        } message: {
+            Text(viewModel.errorMessage ?? "")
         }
     }
 
@@ -254,6 +264,7 @@ final class ReportDetailViewModel: ObservableObject {
     @Published var isLoading = true
     @Published var showExportSuccess = false
     @Published var exportedFilePath = ""
+    @Published var errorMessage: String?
 
     private let pdfGenerator = PDFReportGenerator.shared
     private let stationRepo = StationRepository()
@@ -299,7 +310,7 @@ final class ReportDetailViewModel: ObservableObject {
             exportedFilePath = fileURL.path
             showExportSuccess = true
         } catch {
-            print("Export error: \(error)")
+            errorMessage = "Export failed: \(error.localizedDescription)"
         }
     }
 
@@ -319,8 +330,7 @@ final class ReportDetailViewModel: ObservableObject {
                 "Total Stations: \(stations.count) (\(onlineStations) online)",
                 "Total Pipelines: \(pipelines.count) (\(String(format: "%.1f", totalLength)) km)",
                 "Average Pressure: \(String(format: "%.2f", stations.reduce(0) { $0 + $1.pressure } / Double(max(stations.count, 1)))) bar",
-                "Active Alerts: \(alerts.filter { !$0.isAcknowledged }.count)",
-                "System Uptime: 99.5%"
+                "Active Alerts: \(alerts.filter { !$0.isAcknowledged }.count)"
             ]
         case "Pressure Analysis":
             let pressures = stations.map { $0.pressure }
@@ -328,17 +338,14 @@ final class ReportDetailViewModel: ObservableObject {
                 "Average System Pressure: \(String(format: "%.2f", pressures.reduce(0, +) / Double(max(pressures.count, 1)))) bar",
                 "Maximum Recorded: \(String(format: "%.1f", pressures.max() ?? 0)) bar",
                 "Minimum Recorded: \(String(format: "%.1f", pressures.min() ?? 0)) bar",
-                "Pressure Variance: ±0.3 bar",
-                "Anomalies Detected: 1"
+                "Pressure Variance: ±\(String(format: "%.2f", (pressures.max() ?? 0) - (pressures.min() ?? 0))) bar"
             ]
         case "Flow Report":
             let flows = stations.map { $0.flowRate }
             return [
                 "Total Flow Rate: \(String(format: "%.1f", flows.reduce(0, +))) m³/h",
                 "Peak Flow: \(String(format: "%.1f", flows.max() ?? 0)) m³/h",
-                "Average Flow: \(String(format: "%.1f", flows.reduce(0, +) / Double(max(flows.count, 1)))) m³/h",
-                "Flow Distribution: Normal",
-                "Efficiency Rating: 94%"
+                "Average Flow: \(String(format: "%.1f", flows.reduce(0, +) / Double(max(flows.count, 1)))) m³/h"
             ]
         case "Alert History":
             let critical = alerts.filter { $0.severity == .critical }.count
@@ -352,11 +359,8 @@ final class ReportDetailViewModel: ObservableObject {
             ]
         case "Maintenance Log":
             return [
-                "Upcoming Tasks: 4",
-                "Overdue Tasks: 1",
-                "Completed (This Month): 2",
-                "Total Maintenance Cost: $1,750.00",
-                "Next Scheduled: Pressure Calibration (7 days)"
+                "Total Maintenance Records: Available in database",
+                "Use the Maintenance tab to view detailed tasks"
             ]
         case "Asset Inventory":
             return [
@@ -366,20 +370,17 @@ final class ReportDetailViewModel: ObservableObject {
                 "Last Inventory Update: Today"
             ]
         case "Safety Report":
+            let criticalAlerts = alerts.filter { $0.severity == .critical }.count
             return [
-                "Safety Incidents (30 days): 0",
-                "Near Misses: 0",
-                "Emergency Shutdowns: 0",
-                "Gas Leak Detections: 0",
-                "Compliance Status: Fully Compliant"
+                "Critical Alerts: \(criticalAlerts)",
+                "Total Alerts: \(alerts.count)",
+                "Acknowledged Alerts: \(alerts.filter { $0.isAcknowledged }.count)"
             ]
         case "Cost Analysis":
             return [
-                "Monthly Operating Cost: $12,450",
-                "Maintenance Cost: $1,750",
-                "Energy Cost: $8,200",
-                "Labor Cost: $2,500",
-                "Budget Variance: -2.3% (Under Budget)"
+                "Asset Count: \(stations.count + pipelines.count)",
+                "Active Alerts: \(alerts.filter { !$0.isAcknowledged }.count)",
+                "Network Status: \(stations.filter { $0.status == .online }.count)/\(stations.count) stations online"
             ]
         default:
             return ["Report data available upon request"]

@@ -71,7 +71,7 @@ struct DashboardView: View {
             await viewModel.loadData()
             await chartViewModel.loadHistoricalData(timeRange: selectedTimeRange)
         }
-        .alert("Error", isPresented: .init(
+        .alert("Dashboard Error", isPresented: .init(
             get: { viewModel.errorMessage != nil },
             set: { if !$0 { viewModel.errorMessage = nil } }
         )) {
@@ -79,7 +79,7 @@ struct DashboardView: View {
         } message: {
             Text(viewModel.errorMessage ?? "")
         }
-        .alert("Error", isPresented: .init(
+        .alert("Chart Error", isPresented: .init(
             get: { chartViewModel.errorMessage != nil },
             set: { if !$0 { chartViewModel.errorMessage = nil } }
         )) {
@@ -102,7 +102,7 @@ struct DashboardView: View {
 
     private var emptyStateView: some View {
         VStack(spacing: 20) {
-            Image(systemName: "dashboard")
+            Image(systemName: "chart.bar.fill")
                 .font(.system(size: 64))
                 .foregroundColor(.secondary)
 
@@ -125,7 +125,7 @@ struct DashboardView: View {
         HStack {
             VStack(alignment: .leading) {
                 Text("Dashboard")
-                    .font(.largeTitle)
+                    .font(.title2)
                     .fontWeight(.bold)
                 Text("Real-time monitoring overview")
                     .foregroundColor(.secondary)

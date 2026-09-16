@@ -11,7 +11,7 @@ struct AboutView: View {
                 .font(.largeTitle)
                 .fontWeight(.bold)
 
-            Text("Version 1.0.0")
+            Text("Version \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0")")
                 .font(.title3)
                 .foregroundColor(.secondary)
 
@@ -22,7 +22,7 @@ struct AboutView: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 12) {
-                AboutInfoRow(label: "Platform", value: "macOS 14.0+")
+                AboutInfoRow(label: "Platform", value: "macOS \(ProcessInfo.processInfo.operatingSystemVersion.majorVersion).\(ProcessInfo.processInfo.operatingSystemVersion.minorVersion)+")
                 AboutInfoRow(label: "Framework", value: "SwiftUI")
                 AboutInfoRow(label: "Language", value: "Swift 6.0")
                 AboutInfoRow(label: "Database", value: "SQLite (GRDB.swift)")

@@ -73,6 +73,7 @@ struct StatusItem: View {
 
             ProgressView(value: percentage)
                 .tint(statusColor)
+                .accessibilityLabel("\(title) status: \(online) of \(total) online")
         }
         .frame(maxWidth: .infinity)
     }

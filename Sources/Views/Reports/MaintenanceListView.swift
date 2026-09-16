@@ -139,6 +139,7 @@ struct MaintenanceListView: View {
     private var maintenanceContent: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
+                let lastId = viewModel.filteredLogs.last?.id
                 ForEach(viewModel.filteredLogs) { log in
                     Button(action: { selectedLog = log }) {
                         MaintenanceRowView(log: log) {
@@ -148,7 +149,8 @@ struct MaintenanceListView: View {
                         }
                     }
                     .buttonStyle(.plain)
-                    if log.id != viewModel.filteredLogs.last?.id {
+                    .accessibilityLabel("View \(log.description) details")
+                    if log.id != lastId {
                         Divider().padding(.leading, 48)
                     }
                 }
@@ -213,7 +215,9 @@ struct MaintenanceRowView: View {
                     Text(log.assetType)
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Text("•")
+                    Text("-")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                     Text(log.maintenanceType.rawValue)
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -262,6 +266,7 @@ struct MaintenanceRowView: View {
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
+                    .accessibilityLabel("Complete maintenance task")
                 }
 
                 Menu {
@@ -273,6 +278,7 @@ struct MaintenanceRowView: View {
                         .foregroundColor(.secondary)
                 }
                 .menuStyle(.borderlessButton)
+                .accessibilityLabel("More actions")
             }
         }
         .padding(.horizontal)
@@ -325,6 +331,7 @@ struct MaintenanceDetailView: View {
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Close")
             }
 
             Divider()

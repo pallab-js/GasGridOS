@@ -10,6 +10,7 @@ struct StatusBadge: View {
             if let icon = icon {
                 Image(systemName: icon)
                     .font(.caption)
+                    .accessibilityHidden(true)
             }
             Text(text)
                 .font(.caption)
@@ -20,5 +21,6 @@ struct StatusBadge: View {
         .background(color.opacity(0.2))
         .foregroundColor(color)
         .clipShape(Capsule())
+        .accessibilityElement(children: .combine)
     }
 }

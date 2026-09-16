@@ -11,6 +11,7 @@ struct StationPerformanceView: View {
                 }
             }
         }
+        .accessibilityLabel("Station performance cards")
         .padding()
         .background(Color(NSColor.controlBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: 10))
