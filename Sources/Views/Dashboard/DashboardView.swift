@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct DashboardView: View {
     @Binding var selectedTab: SidebarView.SidebarTab
@@ -6,6 +7,9 @@ struct DashboardView: View {
     @StateObject private var chartViewModel = ChartViewModel()
     @State private var selectedTimeRange: ChartViewModel.TimeRange = .lastHour
     @State private var containerWidth: CGFloat = 1400
+
+    @AppStorage("autoRefresh") private var autoRefresh = true
+    @AppStorage("refreshInterval") private var refreshInterval = 5
 
     private var isCompact: Bool { containerWidth < 1100 }
 
@@ -66,10 +70,26 @@ struct DashboardView: View {
         .task {
             await viewModel.loadData()
             await chartViewModel.loadHistoricalData(timeRange: selectedTimeRange)
+
+            // Keep KPIs in step with the simulator using the interval the
+            // user configured in Settings > General > Data Refresh.
+            while !Task.isCancelled {
+                let interval = max(1, refreshInterval)
+                try? await Task.sleep(nanoseconds: UInt64(interval) * 1_000_000_000)
+                if Task.isCancelled { break }
+                guard autoRefresh else { continue }
+                await viewModel.loadData()
+            }
         }
         .refreshable {
             await viewModel.loadData()
             await chartViewModel.loadHistoricalData(timeRange: selectedTimeRange)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .gasGridRefreshData)) { _ in
+            Task {
+                await viewModel.loadData()
+                await chartViewModel.loadHistoricalData(timeRange: selectedTimeRange)
+            }
         }
         .alert("Dashboard Error", isPresented: .init(
             get: { viewModel.errorMessage != nil },
@@ -136,12 +156,13 @@ struct DashboardView: View {
             VStack(alignment: .trailing, spacing: 4) {
                 HStack(spacing: 4) {
                     Circle()
-                        .fill(.green)
+                        .fill(autoRefresh ? Color.green : Color.gray)
                         .frame(width: 8, height: 8)
-                    Text("Live")
+                    Text(autoRefresh ? "Live" : "Paused")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
+                .accessibilityLabel(autoRefresh ? "Live updates enabled" : "Live updates paused")
                 Text("Last Updated")
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -161,7 +182,7 @@ struct DashboardView: View {
                     icon: "gauge.medium",
                     color: .blue,
                     trend: formatTrend(viewModel.pressureTrend, unit: "bar"),
-                    isPositiveTrend: viewModel.pressureTrend >= 0
+                    isPositiveTrend: trendDirection(viewModel.pressureTrend)
                 )
 
                 KPICardView(
@@ -170,7 +191,7 @@ struct DashboardView: View {
                     icon: "waveform.path.ecg",
                     color: .green,
                     trend: formatTrend(viewModel.flowRateTrend, unit: "m³/h"),
-                    isPositiveTrend: viewModel.flowRateTrend >= 0
+                    isPositiveTrend: trendDirection(viewModel.flowRateTrend)
                 )
 
                 KPICardView(
@@ -179,7 +200,7 @@ struct DashboardView: View {
                     icon: "thermometer.medium",
                     color: .orange,
                     trend: formatTrend(viewModel.temperatureTrend, unit: "°C"),
-                    isPositiveTrend: viewModel.temperatureTrend >= 0
+                    isPositiveTrend: trendDirection(viewModel.temperatureTrend)
                 )
 
                 KPICardView(
@@ -196,9 +217,16 @@ struct DashboardView: View {
     }
 
     private func formatTrend(_ value: Double, unit: String) -> String {
-        if abs(value) < 0.01 { return "0" }
-        let sign = value >= 0 ? "+" : ""
-        return "\(sign)\(String(format: "%.2f", value))"
+        let clamped = abs(value) < 0.005 ? 0 : value
+        let sign = clamped > 0 ? "+" : (clamped < 0 ? "-" : "")
+        return "\(sign)\(String(format: "%.2f", abs(clamped))) \(unit)"
+    }
+
+    /// `nil` for a flat trend so the card shows no misleading arrow.
+    private func trendDirection(_ value: Double) -> Bool? {
+        if value > 0.005 { return true }
+        if value < -0.005 { return false }
+        return nil
     }
 
     private var chartsSection: some View {
@@ -212,23 +240,29 @@ struct DashboardView: View {
                     }
 
                 LazyVGrid(columns: chartColumns, spacing: 16) {
-                    PressureChartView(
-                        data: chartViewModel.pressureHistory,
-                        unit: "bar",
-                        chartHeight: chartHeight
-                    )
+                    if chartViewModel.isLoading && chartViewModel.pressureHistory.isEmpty {
+                        ProgressView("Loading charts...")
+                            .frame(maxWidth: .infinity)
+                            .frame(height: chartHeight)
+                    } else {
+                        PressureChartView(
+                            data: chartViewModel.pressureHistory,
+                            unit: "bar",
+                            chartHeight: chartHeight
+                        )
 
-                    FlowRateChartView(
-                        data: chartViewModel.flowRateHistory,
-                        unit: "m³/h",
-                        chartHeight: chartHeight
-                    )
+                        FlowRateChartView(
+                            data: chartViewModel.flowRateHistory,
+                            unit: "m³/h",
+                            chartHeight: chartHeight
+                        )
 
-                    TemperatureChartView(
-                        data: chartViewModel.temperatureHistory,
-                        unit: "°C",
-                        chartHeight: chartHeight
-                    )
+                        TemperatureChartView(
+                            data: chartViewModel.temperatureHistory,
+                            unit: "°C",
+                            chartHeight: chartHeight
+                        )
+                    }
                 }
             }
         } label: {

@@ -2,6 +2,10 @@ import SwiftUI
 
 struct SidebarView: View {
     @Binding var selectedTab: SidebarTab
+    @ObservedObject var simulator: RealTimeSimulator
+
+    @AppStorage("showAlertBadges") private var showAlertBadges = true
+    @StateObject private var alertViewModel = AlertViewModel()
 
     enum SidebarTab: String, CaseIterable, Identifiable {
         case dashboard = "Dashboard"
@@ -33,10 +37,35 @@ struct SidebarView: View {
 
     var body: some View {
         List(SidebarTab.allCases, selection: $selectedTab) { tab in
-            Label(tab.rawValue, systemImage: tab.icon)
+            if tab == .alerts && showAlertBadges && alertViewModel.unacknowledgedCount > 0 {
+                HStack {
+                    Label(tab.rawValue, systemImage: tab.icon)
+                    Spacer()
+                    Text("\(alertViewModel.unacknowledgedCount)")
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Color.red))
+                        .foregroundColor(.white)
+                        .accessibilityLabel("\(alertViewModel.unacknowledgedCount) unacknowledged alerts")
+                }
                 .tag(tab)
+            } else {
+                Label(tab.rawValue, systemImage: tab.icon)
+                    .tag(tab)
+            }
         }
         .listStyle(.sidebar)
         .navigationTitle("GasGrid Manager")
+        .task {
+            await alertViewModel.loadData()
+        }
+        .onChange(of: simulator.lastUpdate) { _, _ in
+            Task { await alertViewModel.loadData() }
+        }
+        .onChange(of: selectedTab) { _, _ in
+            Task { await alertViewModel.loadData() }
+        }
     }
 }

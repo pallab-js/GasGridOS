@@ -29,11 +29,15 @@ struct AlertSummaryView: View {
                 .frame(maxWidth: .infinity)
                 .padding()
             } else {
-                ScrollView {
-                    VStack(spacing: 8) {
-                        ForEach(alerts.prefix(maxDisplay)) { alert in
-                            AlertSummaryRowView(alert: alert)
-                        }
+                VStack(spacing: 8) {
+                    ForEach(alerts.prefix(maxDisplay)) { alert in
+                        AlertSummaryRowView(alert: alert)
+                    }
+
+                    if alerts.count > maxDisplay {
+                        Text("+\(alerts.count - maxDisplay) more")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
                 }
             }

@@ -35,13 +35,20 @@ struct MaintenanceListView: View {
         .sheet(isPresented: $showingAddSheet) {
             AddMaintenanceView { log in
                 viewModel.addMaintenanceLog(log)
-                showingAddSheet = false
             }
         }
         .sheet(item: $selectedLog) { log in
             MaintenanceDetailView(log: log) { updatedLog in
                 viewModel.updateMaintenanceLog(updatedLog)
             }
+        }
+        .alert("Error", isPresented: .init(
+            get: { viewModel.errorMessage != nil },
+            set: { if !$0 { viewModel.errorMessage = nil } }
+        )) {
+            Button("OK") { viewModel.errorMessage = nil }
+        } message: {
+            Text(viewModel.errorMessage ?? "")
         }
         .alert("Delete Task", isPresented: Binding(
             get: { logToDelete != nil },
@@ -118,22 +125,41 @@ struct MaintenanceListView: View {
         .padding(.vertical, 8)
     }
 
+    @ViewBuilder
     private var emptyStateView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "wrench.and.screwdriver")
-                .font(.system(size: 48))
-                .foregroundColor(.secondary)
-            Text("No maintenance tasks")
-                .font(.title3)
-            Text("Add maintenance tasks to track scheduled work")
-                .font(.caption)
-                .foregroundColor(.secondary)
-            Button("Add First Task") {
-                showingAddSheet = true
+        if viewModel.maintenanceLogs.isEmpty {
+            VStack(spacing: 16) {
+                Image(systemName: "wrench.and.screwdriver")
+                    .font(.system(size: 48))
+                    .foregroundColor(.secondary)
+                Text("No maintenance tasks")
+                    .font(.title3)
+                Text("Add maintenance tasks to track scheduled work")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Button("Add First Task") {
+                    showingAddSheet = true
+                }
+                .buttonStyle(.borderedProminent)
             }
-            .buttonStyle(.borderedProminent)
+            .frame(maxHeight: .infinity)
+        } else {
+            VStack(spacing: 16) {
+                Image(systemName: "calendar.badge.exclamationmark")
+                    .font(.system(size: 48))
+                    .foregroundColor(.secondary)
+                Text("No \(viewModel.selectedFilter.rawValue.lowercased()) tasks")
+                    .font(.title3)
+                Text("Switch the filter to see other maintenance records")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Button("Show All") {
+                    viewModel.selectedFilter = .all
+                }
+                .buttonStyle(.bordered)
+            }
+            .frame(maxHeight: .infinity)
         }
-        .frame(maxHeight: .infinity)
     }
 
     private var maintenanceContent: some View {
@@ -141,14 +167,12 @@ struct MaintenanceListView: View {
             LazyVStack(spacing: 0) {
                 let lastId = viewModel.filteredLogs.last?.id
                 ForEach(viewModel.filteredLogs) { log in
-                    Button(action: { selectedLog = log }) {
-                        MaintenanceRowView(log: log) {
-                            viewModel.completeMaintenance(log)
-                        } onDelete: {
-                            logToDelete = log
-                        }
-                    }
-                    .buttonStyle(.plain)
+                    MaintenanceRowView(
+                        log: log,
+                        onSelect: { selectedLog = log },
+                        onComplete: { viewModel.completeMaintenance(log) },
+                        onDelete: { logToDelete = log }
+                    )
                     .accessibilityLabel("View \(log.description) details")
                     if log.id != lastId {
                         Divider().padding(.leading, 48)
@@ -185,78 +209,84 @@ struct StatBadge: View {
 
 struct MaintenanceRowView: View {
     let log: MaintenanceLog
+    let onSelect: () -> Void
     let onComplete: () -> Void
     let onDelete: () -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            Image(systemName: log.maintenanceType.icon)
-                .font(.title3)
-                .foregroundColor(log.isOverdue ? .red : .blue)
-                .frame(width: 28)
+            Button(action: onSelect) {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: log.maintenanceType.icon)
+                        .font(.title3)
+                        .foregroundColor(log.isOverdue ? .red : .blue)
+                        .frame(width: 28)
 
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text(log.description)
-                        .fontWeight(.medium)
-                    if log.isOverdue {
-                        Text("OVERDUE")
-                            .font(.caption2)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(.red)
-                            .clipShape(Capsule())
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text(log.description)
+                                .fontWeight(.medium)
+                            if log.isOverdue {
+                                Text("OVERDUE")
+                                    .font(.caption2)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(.red)
+                                    .clipShape(Capsule())
+                            }
+                        }
+
+                        HStack {
+                            Text(log.assetType)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text("-")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text(log.maintenanceType.rawValue)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+
+                        if let performedBy = log.performedBy {
+                            HStack(spacing: 4) {
+                                Image(systemName: "person")
+                                    .font(.caption2)
+                                Text(performedBy)
+                            }
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        }
+                    }
+
+                    Spacer()
+
+                    VStack(alignment: .trailing, spacing: 4) {
+                        if log.isCompleted {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                            Text("Completed")
+                                .font(.caption)
+                                .foregroundColor(.green)
+                        } else {
+                            Text(log.scheduledDate, style: .date)
+                                .font(.caption)
+                            Text(log.scheduledDate, style: .time)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+
+                        if let cost = log.cost {
+                            Text(String(format: "$%.2f", cost))
+                                .font(.caption)
+                                .foregroundColor(.orange)
+                        }
                     }
                 }
-
-                HStack {
-                    Text(log.assetType)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Text("-")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Text(log.maintenanceType.rawValue)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-
-                if let performedBy = log.performedBy {
-                    HStack(spacing: 4) {
-                        Image(systemName: "person")
-                            .font(.caption2)
-                        Text(performedBy)
-                    }
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                }
             }
-
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 4) {
-                if log.isCompleted {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                    Text("Completed")
-                        .font(.caption)
-                        .foregroundColor(.green)
-                } else {
-                    Text(log.scheduledDate, style: .date)
-                        .font(.caption)
-                    Text(log.scheduledDate, style: .time)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-
-                if let cost = log.cost {
-                    Text(String(format: "$%.2f", cost))
-                        .font(.caption)
-                        .foregroundColor(.orange)
-                }
-            }
+            .buttonStyle(.plain)
 
             HStack(spacing: 4) {
                 if !log.isCompleted {
@@ -266,7 +296,7 @@ struct MaintenanceRowView: View {
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
-                    .accessibilityLabel("Complete maintenance task")
+                    .accessibilityLabel("Complete \(log.description)")
                 }
 
                 Menu {
@@ -278,7 +308,7 @@ struct MaintenanceRowView: View {
                         .foregroundColor(.secondary)
                 }
                 .menuStyle(.borderlessButton)
-                .accessibilityLabel("More actions")
+                .accessibilityLabel("More actions for \(log.description)")
             }
         }
         .padding(.horizontal)
@@ -406,12 +436,25 @@ struct MaintenanceDetailView: View {
 struct AddMaintenanceView: View {
     @Environment(\.dismiss) var dismiss
     @State private var description = ""
-    @State private var assetType = "Station"
+    @State private var selectedAssetId: UUID?
     @State private var maintenanceType: MaintenanceType = .preventive
     @State private var scheduledDate = Date()
     @State private var performedBy = ""
+    @State private var assets: [AssetOption] = []
+    @State private var isLoadingAssets = true
+    @State private var assetLoadError: String?
 
     let onSave: (MaintenanceLog) -> Void
+
+    private struct AssetOption: Identifiable, Hashable {
+        let id: UUID
+        let name: String
+        let type: String
+    }
+
+    private var isValid: Bool {
+        !description.isEmpty && selectedAssetId != nil
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -420,34 +463,51 @@ struct AddMaintenanceView: View {
                 .fontWeight(.bold)
 
             Form {
-                TextField("Description", text: $description)
-                    .onChange(of: description) { _, newValue in
-                        if newValue.count > 200 {
-                            description = String(newValue.prefix(200))
+                Section("Details") {
+                    TextField("Description", text: $description)
+                        .onChange(of: description) { _, newValue in
+                            if newValue.count > 200 {
+                                description = String(newValue.prefix(200))
+                            }
+                        }
+
+                    Picker("Maintenance Type", selection: $maintenanceType) {
+                        ForEach(MaintenanceType.allCases) { type in
+                            Label(type.rawValue, systemImage: type.icon).tag(type)
                         }
                     }
 
-                Picker("Asset Type", selection: $assetType) {
-                    Text("Station").tag("Station")
-                    Text("Pipeline").tag("Pipeline")
-                    Text("Valve").tag("Valve")
-                    Text("Sensor").tag("Sensor")
+                    DatePicker("Scheduled Date", selection: $scheduledDate)
+
+                    TextField("Assigned To", text: $performedBy)
+                        .onChange(of: performedBy) { _, newValue in
+                            if newValue.count > 100 {
+                                performedBy = String(newValue.prefix(100))
+                            }
+                        }
                 }
 
-                Picker("Maintenance Type", selection: $maintenanceType) {
-                    ForEach(MaintenanceType.allCases) { type in
-                        Label(type.rawValue, systemImage: type.icon).tag(type)
-                    }
-                }
-
-                DatePicker("Scheduled Date", selection: $scheduledDate)
-
-                TextField("Assigned To", text: $performedBy)
-                    .onChange(of: performedBy) { _, newValue in
-                        if newValue.count > 100 {
-                            performedBy = String(newValue.prefix(100))
+                Section("Asset") {
+                    if isLoadingAssets {
+                        ProgressView("Loading assets...")
+                    } else if let assetLoadError {
+                        Text(assetLoadError)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    } else if assets.isEmpty {
+                        Text("Add stations, pipelines or valves before creating a maintenance task.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Picker("Asset", selection: $selectedAssetId) {
+                            Text("Select...").tag(UUID?.none)
+                            ForEach(assets) { asset in
+                                Text("\(asset.name) - \(asset.type)")
+                                    .tag(UUID?.some(asset.id))
+                            }
                         }
                     }
+                }
             }
             .formStyle(.grouped)
 
@@ -459,21 +519,49 @@ struct AddMaintenanceView: View {
                 .buttonStyle(.bordered)
 
                 Button("Save") {
+                    guard let asset = assets.first(where: { $0.id == selectedAssetId }) else { return }
                     let log = MaintenanceLog(
-                        assetId: UUID(),
-                        assetType: assetType,
+                        assetId: asset.id,
+                        assetType: asset.type,
                         maintenanceType: maintenanceType,
                         description: description,
                         scheduledDate: scheduledDate,
                         performedBy: performedBy.isEmpty ? nil : performedBy
                     )
                     onSave(log)
+                    dismiss()
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(description.isEmpty)
+                .disabled(!isValid)
             }
         }
         .padding()
-        .frame(width: 450, height: 500)
+        .frame(width: 450, height: 540)
+        .task {
+            await loadAssets()
+        }
+    }
+
+    private func loadAssets() async {
+        isLoadingAssets = true
+        defer { isLoadingAssets = false }
+
+        do {
+            var options: [AssetOption] = []
+            options += try StationRepository().fetchAll().map {
+                AssetOption(id: $0.id, name: $0.name, type: "Station")
+            }
+            options += try PipelineRepository().fetchAll().map {
+                AssetOption(id: $0.id, name: $0.name, type: "Pipeline")
+            }
+            options += try ValveRepository().fetchAll().map {
+                AssetOption(id: $0.id, name: $0.name, type: "Valve")
+            }
+            assets = options.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            assetLoadError = nil
+        } catch {
+            assets = []
+            assetLoadError = "Failed to load assets: \(error.localizedDescription)"
+        }
     }
 }

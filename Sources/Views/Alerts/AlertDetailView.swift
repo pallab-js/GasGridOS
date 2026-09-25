@@ -20,18 +20,23 @@ struct AlertDetailView: View {
 
             Divider()
 
-            alertInfoSection
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    alertInfoSection
 
-            Divider()
+                    Divider()
 
-            notesSection
+                    notesSection
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
 
             Divider()
 
             actionButtons
         }
         .padding()
-        .frame(width: 550, height: 500)
+        .frame(minWidth: 550, maxWidth: 550, minHeight: 420, maxHeight: 640)
     }
 
     private var headerSection: some View {
@@ -134,6 +139,7 @@ struct AlertDetailView: View {
                 dismiss()
             }
             .buttonStyle(.bordered)
+            .keyboardShortcut(.cancelAction)
         }
     }
 }

@@ -87,22 +87,38 @@ struct ValveListView: View {
         .padding()
     }
 
+    @ViewBuilder
     private var emptyStateView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "lock.fill")
-                .font(.system(size: 48))
-                .foregroundColor(.secondary)
-            Text("No valves found")
-                .font(.title3)
-            Text("Add valves to manage flow control in your network")
-                .font(.caption)
-                .foregroundColor(.secondary)
-            Button("Add First Valve") {
-                showingAddValve = true
+        if viewModel.valves.isEmpty {
+            VStack(spacing: 16) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 48))
+                    .foregroundColor(.secondary)
+                Text("No valves found")
+                    .font(.title3)
+                Text("Add valves to manage flow control in your network")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Button("Add First Valve") {
+                    showingAddValve = true
+                }
+                .buttonStyle(.borderedProminent)
             }
-            .buttonStyle(.borderedProminent)
+            .frame(maxHeight: .infinity)
+        } else {
+            VStack(spacing: 16) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 48))
+                    .foregroundColor(.secondary)
+                Text("No valves match \"\(viewModel.searchText)\"")
+                    .font(.title3)
+                Button("Clear Search") {
+                    viewModel.searchText = ""
+                }
+                .buttonStyle(.bordered)
+            }
+            .frame(maxHeight: .infinity)
         }
-        .frame(maxHeight: .infinity)
     }
 
     private var valveList: some View {
@@ -110,12 +126,11 @@ struct ValveListView: View {
             LazyVStack(spacing: 0) {
                 let lastId = viewModel.filteredValves.last?.id
                 ForEach(viewModel.filteredValves) { valve in
-                    Button(action: { selectedValve = valve }) {
-                        ValveRowView(valve: valve, onDelete: {
-                            valveToDelete = valve
-                        })
-                    }
-                    .buttonStyle(.plain)
+                    ValveRowView(
+                        valve: valve,
+                        onSelect: { selectedValve = valve },
+                        onDelete: { valveToDelete = valve }
+                    )
                     .accessibilityLabel("View \(valve.name) details")
                     if valve.id != lastId {
                         Divider().padding(.leading, 48)
@@ -129,37 +144,48 @@ struct ValveListView: View {
 
 struct ValveRowView: View {
     let valve: Valve
+    let onSelect: () -> Void
     let onDelete: () -> Void
 
     var body: some View {
         HStack {
-            Image(systemName: valve.valveType.icon)
-                .foregroundColor(.blue)
-                .frame(width: 24)
+            Button(action: onSelect) {
+                HStack {
+                    Image(systemName: valve.valveType.icon)
+                        .foregroundColor(.blue)
+                        .frame(width: 24)
 
-            VStack(alignment: .leading) {
-                Text(valve.name)
-                    .fontWeight(.medium)
-                Text(valve.valveType.rawValue)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    VStack(alignment: .leading) {
+                        Text(valve.name)
+                            .fontWeight(.medium)
+                        Text(valve.valveType.rawValue)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+
+                    StatusBadge(
+                        text: valve.status.rawValue,
+                        color: valve.status.color,
+                        icon: valve.status.icon
+                    )
+
+                    VStack(alignment: .trailing) {
+                        Text(String(format: "%.0f%%", valve.position * 100))
+                            .font(.caption)
+                        Text(String(format: "%.0f mm", valve.diameter))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .accessibilityHidden(true)
+                }
             }
-
-            Spacer()
-
-            StatusBadge(
-                text: valve.status.rawValue,
-                color: valve.status.color,
-                icon: valve.status.icon
-            )
-
-            VStack(alignment: .trailing) {
-                Text(String(format: "%.0f%%", valve.position * 100))
-                    .font(.caption)
-                Text(String(format: "%.0f mm", valve.diameter))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
+            .buttonStyle(.plain)
 
             Menu {
                 Button(action: onDelete) {
@@ -171,12 +197,7 @@ struct ValveRowView: View {
             }
             .menuStyle(.borderlessButton)
             .frame(width: 24)
-            .accessibilityLabel("More actions")
-
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .accessibilityHidden(true)
+            .accessibilityLabel("More actions for \(valve.name)")
         }
         .padding(.horizontal)
         .padding(.vertical, 8)

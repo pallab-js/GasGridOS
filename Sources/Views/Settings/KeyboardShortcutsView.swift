@@ -22,16 +22,9 @@ struct KeyboardShortcutsView: View {
 
                 Section("Actions") {
                     ShortcutRow(shortcut: "⌘ + R", action: "Refresh Data")
-                    ShortcutRow(shortcut: "⌘ + N", action: "Add New Item")
-                    ShortcutRow(shortcut: "⌘ + F", action: "Search")
-                    ShortcutRow(shortcut: "⌘ + E", action: "Export")
+                    ShortcutRow(shortcut: "⌘ + E", action: "Export Data")
                     ShortcutRow(shortcut: "⌘ + ,", action: "Preferences")
-                }
-
-                Section("Alerts") {
-                    ShortcutRow(shortcut: "⌘ + ⇧ + A", action: "View All Alerts")
-                    ShortcutRow(shortcut: "⌘ + ⇧ + C", action: "Clear All Alerts")
-                    ShortcutRow(shortcut: "⌘ + ⇧ + E", action: "Export Alerts")
+                    ShortcutRow(shortcut: "Esc", action: "Close Sheet")
                 }
             }
             .formStyle(.grouped)
@@ -47,7 +40,7 @@ struct ShortcutRow: View {
     var body: some View {
         HStack {
             Text(action)
-                .frame(width: 200, alignment: .leading)
+                .frame(minWidth: 160, alignment: .leading)
             Spacer()
             Text(shortcut)
                 .font(.system(.body, design: .monospaced))
@@ -56,5 +49,7 @@ struct ShortcutRow: View {
                 .background(Color(NSColor.controlBackgroundColor))
                 .clipShape(RoundedRectangle(cornerRadius: 4))
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(action), keyboard shortcut \(shortcut)")
     }
 }

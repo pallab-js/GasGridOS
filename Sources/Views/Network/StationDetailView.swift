@@ -3,6 +3,11 @@ import SwiftUI
 struct StationDetailView: View {
     @Environment(\.dismiss) var dismiss
     let station: NetworkStation
+    @State private var refreshedStation: NetworkStation?
+
+    private var displayed: NetworkStation {
+        refreshedStation ?? station
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -28,20 +33,35 @@ struct StationDetailView: View {
                 Spacer()
                 Button("Done") { dismiss() }
                     .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.defaultAction)
                     .padding(.vertical, 10)
             }
         }
         .padding(.horizontal, 20)
         .frame(minWidth: 420, minHeight: 480)
+        .task {
+            await refresh()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .gasGridRefreshData)) { _ in
+            Task { await refresh() }
+        }
+    }
+
+    private func refresh() async {
+        do {
+            refreshedStation = try StationRepository().fetchById(station.id)
+        } catch {
+            refreshedStation = nil
+        }
     }
 
     private var headerSection: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(station.name)
+                Text(displayed.name)
                     .font(.title2)
                     .fontWeight(.bold)
-                Text(station.stationType.rawValue)
+                Text(displayed.stationType.rawValue)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
@@ -49,9 +69,9 @@ struct StationDetailView: View {
             Spacer()
 
             StatusBadge(
-                text: station.status.rawValue,
-                color: station.status.color,
-                icon: station.status.icon
+                text: displayed.status.rawValue,
+                color: displayed.status.color,
+                icon: displayed.status.icon
             )
         }
         .padding(.top, 16)
@@ -68,30 +88,30 @@ struct StationDetailView: View {
             ], spacing: 12) {
                 MetricCard(
                     title: "Pressure",
-                    value: String(format: "%.2f bar", station.pressure),
+                    value: String(format: "%.2f bar", displayed.pressure),
                     icon: "gauge.medium",
-                    color: station.isPressureNormal ? .blue : .red
+                    color: displayed.isPressureNormal ? .blue : .red
                 )
 
                 MetricCard(
                     title: "Flow Rate",
-                    value: String(format: "%.1f m³/h", station.flowRate),
+                    value: String(format: "%.1f m³/h", displayed.flowRate),
                     icon: "waveform.path.ecg",
                     color: .green
                 )
 
                 MetricCard(
                     title: "Temperature",
-                    value: String(format: "%.1f°C", station.temperature),
+                    value: String(format: "%.1f°C", displayed.temperature),
                     icon: "thermometer.medium",
                     color: .orange
                 )
 
                 MetricCard(
                     title: "Status",
-                    value: station.status.rawValue,
-                    icon: station.status.icon,
-                    color: station.status.color
+                    value: displayed.status.rawValue,
+                    icon: displayed.status.icon,
+                    color: displayed.status.color
                 )
             }
         }
@@ -102,12 +122,12 @@ struct StationDetailView: View {
             Text("Details")
                 .font(.headline)
 
-            DetailRow(label: "Installed", value: station.installedDate.formatted(date: .abbreviated, time: .omitted))
-            DetailRow(label: "Last Maintenance", value: station.lastMaintenanceDate?.formatted(date: .abbreviated, time: .omitted) ?? "Never")
-            DetailRow(label: "Min Pressure", value: String(format: "%.2f bar", station.minimumPressure))
-            DetailRow(label: "Max Pressure", value: String(format: "%.2f bar", station.maximumPressure))
+            DetailRow(label: "Installed", value: displayed.installedDate.formatted(date: .abbreviated, time: .omitted))
+            DetailRow(label: "Last Maintenance", value: displayed.lastMaintenanceDate?.formatted(date: .abbreviated, time: .omitted) ?? "Never")
+            DetailRow(label: "Min Pressure", value: String(format: "%.2f bar", displayed.minimumPressure))
+            DetailRow(label: "Max Pressure", value: String(format: "%.2f bar", displayed.maximumPressure))
 
-            if let notes = station.notes {
+            if let notes = displayed.notes {
                 DetailRow(label: "Notes", value: notes)
             }
         }

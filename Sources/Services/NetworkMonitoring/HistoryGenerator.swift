@@ -12,49 +12,60 @@ final class HistoryGenerator {
 
     private init() {}
 
+    /// Generates one week of hourly telemetry for every station that has sensors.
+    /// Safe to call repeatedly: readings outside the retention window are pruned
+    /// first and stations without the required sensors are skipped rather than
+    /// given fabricated ids.
     func generateHistoryData(for stations: [NetworkStation], days: Int = 7) {
         let calendar = Calendar.current
         let now = Date()
         guard let startDate = calendar.date(byAdding: .day, value: -days, to: now) else { return }
 
+        do {
+            try historyRepo.deleteOlderThan(startDate)
+        } catch {
+            logger.error("Error pruning old readings: \(error.localizedDescription)")
+        }
+
         var readings: [SensorReading] = []
 
         for station in stations {
-            let sensors = (try? sensorRepo.fetchByStation(station.id)) ?? []
-            let pressureSensorId = sensors.first(where: { $0.sensorType == .pressure })?.id ?? station.id
-            let flowSensorId = sensors.first(where: { $0.sensorType == .flowRate })?.id ?? station.id
-            let tempSensorId = sensors.first(where: { $0.sensorType == .temperature })?.id ?? station.id
+            guard let sensors = try? sensorRepo.fetchByStation(station.id) else {
+                logger.error("Skipping history for \(station.name): sensors could not be loaded")
+                continue
+            }
+            guard let pressureSensor = sensors.first(where: { $0.sensorType == .pressure }),
+                  let flowSensor = sensors.first(where: { $0.sensorType == .flowRate }),
+                  let tempSensor = sensors.first(where: { $0.sensorType == .temperature }) else {
+                continue
+            }
 
             var currentDate = startDate
             while currentDate <= now {
-                let pressureReading = createReading(
-                    sensorId: pressureSensorId,
+                readings.append(createReading(
+                    sensorId: pressureSensor.id,
                     type: .pressure,
                     baseValue: station.pressure,
                     variance: 0.3,
                     timestamp: currentDate
-                )
-                readings.append(pressureReading)
-
-                let flowReading = createReading(
-                    sensorId: flowSensorId,
+                ))
+                readings.append(createReading(
+                    sensorId: flowSensor.id,
                     type: .flowRate,
                     baseValue: station.flowRate,
                     variance: 10.0,
                     timestamp: currentDate.addingTimeInterval(60)
-                )
-                readings.append(flowReading)
-
-                let tempReading = createReading(
-                    sensorId: tempSensorId,
+                ))
+                readings.append(createReading(
+                    sensorId: tempSensor.id,
                     type: .temperature,
                     baseValue: station.temperature,
                     variance: 2.0,
                     timestamp: currentDate.addingTimeInterval(120)
-                )
-                readings.append(tempReading)
+                ))
 
-                currentDate = calendar.date(byAdding: .hour, value: 1, to: currentDate) ?? currentDate
+                guard let nextHour = calendar.date(byAdding: .hour, value: 1, to: currentDate) else { break }
+                currentDate = nextHour
             }
         }
 
@@ -98,9 +109,13 @@ final class HistoryGenerator {
         guard let startDate = calendar.date(byAdding: .hour, value: -Int(timeRange.hours), to: now) else { return [] }
 
         do {
+            let sensors = try sensorRepo.fetchByStation(stationId)
+            let sensorIds = Set(sensors.filter { $0.sensorType == type }.map(\.id))
+            guard !sensorIds.isEmpty else { return [] }
+
             let readings = try historyRepo.fetchByTimeRange(startDate: startDate, endDate: now)
             let filteredReadings = readings.filter { reading in
-                reading.sensorId == stationId && reading.unit == type.unit
+                sensorIds.contains(reading.sensorId) && reading.unit == type.unit
             }
 
             return filteredReadings.map { reading in

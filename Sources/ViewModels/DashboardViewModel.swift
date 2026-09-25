@@ -79,10 +79,19 @@ final class DashboardViewModel: ObservableObject {
             averagePressure = stations.reduce(0) { $0 + $1.pressure } / Double(stations.count)
             averageFlowRate = stations.reduce(0) { $0 + $1.flowRate } / Double(stations.count)
             averageTemperature = stations.reduce(0) { $0 + $1.temperature } / Double(stations.count)
+        } else {
+            averagePressure = 0
+            averageFlowRate = 0
+            averageTemperature = 0
+            pressureTrend = 0
+            flowRateTrend = 0
+            temperatureTrend = 0
         }
     }
 
     private func calculateTrends() {
+        guard !stations.isEmpty else { return }
+
         if previousPressure > 0 {
             pressureTrend = averagePressure - previousPressure
         }

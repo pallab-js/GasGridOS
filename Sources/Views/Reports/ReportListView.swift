@@ -10,10 +10,18 @@ struct ReportListView: View {
         case daily = "Daily"
         case weekly = "Weekly"
         case monthly = "Monthly"
-        case custom = "Custom"
+
+        /// How far back the report looks when filtering event data.
+        var window: TimeInterval {
+            switch self {
+            case .daily: return 24 * 60 * 60
+            case .weekly: return 7 * 24 * 60 * 60
+            case .monthly: return 30 * 24 * 60 * 60
+            }
+        }
     }
 
-    let reportItems: [ReportItem] = [
+    static let reportItems: [ReportItem] = [
         ReportItem(title: "Network Summary", description: "Overview of all network operations", icon: "chart.bar", color: .blue, category: .operations),
         ReportItem(title: "Pressure Analysis", description: "Pressure trends and anomalies", icon: "gauge.medium", color: .green, category: .technical),
         ReportItem(title: "Flow Report", description: "Gas flow distribution analysis", icon: "waveform.path.ecg", color: .orange, category: .technical),
@@ -27,13 +35,11 @@ struct ReportListView: View {
     var filteredReports: [ReportItem] {
         switch selectedReportType {
         case .daily:
-            return reportItems.filter { $0.category == .operations || $0.category == .safety }
+            return Self.reportItems.filter { $0.category == .operations || $0.category == .safety }
         case .weekly:
-            return reportItems.filter { $0.category == .technical || $0.category == .maintenance }
+            return Self.reportItems.filter { $0.category == .technical || $0.category == .maintenance }
         case .monthly:
-            return reportItems
-        case .custom:
-            return reportItems
+            return Self.reportItems
         }
     }
 
@@ -49,7 +55,7 @@ struct ReportListView: View {
             ReportDetailView(report: report, reportType: selectedReportType)
         }
         .sheet(isPresented: $showingExport) {
-            ExportView()
+            ExportView(showsCloseButton: true)
         }
     }
 
@@ -103,15 +109,15 @@ struct ReportListView: View {
     }
 }
 
-struct ReportItem: Identifiable {
-    let id = UUID()
+struct ReportItem: Identifiable, Sendable {
+    var id: String { title }
     let title: String
     let description: String
     let icon: String
     let color: Color
     let category: ReportCategory
 
-    enum ReportCategory {
+    enum ReportCategory: Sendable {
         case operations
         case technical
         case safety
@@ -278,8 +284,10 @@ final class ReportDetailViewModel: ObservableObject {
             let stations = try stationRepo.fetchAll()
             let pipelines = try pipelineRepo.fetchAll()
             let alerts = try alertRepo.fetchAll()
+            let windowStart = Date().addingTimeInterval(-reportType.window)
+            let windowedAlerts = alerts.filter { $0.timestamp >= windowStart }
 
-            reportData = generateReportData(for: report.title, stations: stations, pipelines: pipelines, alerts: alerts)
+            reportData = generateReportData(for: report.title, stations: stations, pipelines: pipelines, alerts: windowedAlerts)
         } catch {
             reportData = ["Error generating report: \(error.localizedDescription)"]
         }
@@ -304,7 +312,7 @@ final class ReportDetailViewModel: ObservableObject {
             let formatter = DateFormatter()
             formatter.dateFormat = "yyyy-MM-dd_HH-mm"
             let dateString = formatter.string(from: Date())
-            let filename = "\(report.title.replacingOccurrences(of: " ", with: "_"))_\(dateString).txt"
+            let filename = "\(report.title.replacingOccurrences(of: " ", with: "_"))_\(dateString).pdf"
 
             let fileURL = try pdfGenerator.saveReport(pdfData, filename: filename)
             exportedFilePath = fileURL.path
@@ -316,7 +324,7 @@ final class ReportDetailViewModel: ObservableObject {
 
     func openExportFolder() {
         let fileManager = FileManager.default
-        let documentsPath = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+        guard let documentsPath = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
         let reportsFolder = documentsPath.appendingPathComponent("GasGridManager Reports")
         NSWorkspace.shared.open(reportsFolder)
     }

@@ -5,6 +5,11 @@ struct ExportView: View {
     @State private var selectedFormat: ExportViewModel.ExportFormat = .csv
     @State private var selectedType: ExportViewModel.ExportType = .all
 
+    /// Set when presented as a sheet so the user has an explicit way out.
+    var showsCloseButton: Bool = false
+
+    @Environment(\.dismiss) private var dismiss
+
     var body: some View {
         VStack(spacing: 0) {
             headerSection
@@ -22,6 +27,28 @@ struct ExportView: View {
             exportStatus
 
             Spacer()
+
+            if showsCloseButton {
+                Divider()
+                HStack {
+                    Spacer()
+                    Button("Close") { dismiss() }
+                        .keyboardShortcut(.cancelAction)
+                        .buttonStyle(.bordered)
+                }
+                .padding()
+            }
+        }
+        .task {
+            viewModel.loadPreview()
+        }
+        .alert("Export Failed", isPresented: .init(
+            get: { viewModel.errorMessage != nil },
+            set: { if !$0 { viewModel.errorMessage = nil } }
+        )) {
+            Button("OK") { viewModel.errorMessage = nil }
+        } message: {
+            Text(viewModel.errorMessage ?? "")
         }
     }
 

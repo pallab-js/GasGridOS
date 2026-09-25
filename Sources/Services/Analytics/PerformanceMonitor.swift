@@ -44,7 +44,7 @@ final class PerformanceMonitor: ObservableObject {
         let taskSelf = mach_task_self_
 
         let result = withUnsafeMutablePointer(to: &info) {
-            $0.withMemoryRebound(to: integer_t.self, capacity: 1) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
                 task_info(taskSelf, task_flavor_t(MACH_TASK_BASIC_INFO), $0, &count)
             }
         }
@@ -53,6 +53,7 @@ final class PerformanceMonitor: ObservableObject {
 
         let usedBytes = Double(info.resident_size)
         let totalBytes = Double(ProcessInfo.processInfo.physicalMemory)
+        guard totalBytes > 0 else { return 0 }
         return (usedBytes / totalBytes) * 100
     }
 

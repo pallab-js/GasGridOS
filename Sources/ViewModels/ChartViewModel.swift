@@ -39,16 +39,27 @@ final class ChartViewModel: ObservableObject {
 
     func loadHistoricalData(for stationId: UUID? = nil, timeRange: TimeRange? = nil) async {
         isLoading = true
+        errorMessage = nil
 
         let range = timeRange ?? selectedTimeRange
         let calendar = Calendar.current
         let now = Date()
-        guard let startDate = calendar.date(byAdding: .hour, value: -Int(range.hours), to: now) else {
+        guard calendar.date(byAdding: .hour, value: -Int(range.hours), to: now) != nil else {
             isLoading = false
             return
         }
 
-        let stations = (try? StationRepository().fetchAll()) ?? []
+        let stations: [NetworkStation]
+        do {
+            stations = try StationRepository().fetchAll()
+        } catch {
+            pressureHistory = []
+            flowRateHistory = []
+            temperatureHistory = []
+            errorMessage = "Failed to load chart data: \(error.localizedDescription)"
+            isLoading = false
+            return
+        }
 
         if let targetStationId = stationId {
             pressureHistory = await HistoryGenerator.shared.fetchChartData(for: targetStationId, type: .pressure, timeRange: range)
@@ -58,30 +69,12 @@ final class ChartViewModel: ObservableObject {
             pressureHistory = await HistoryGenerator.shared.fetchChartData(for: firstStation.id, type: .pressure, timeRange: range)
             flowRateHistory = await HistoryGenerator.shared.fetchChartData(for: firstStation.id, type: .flowRate, timeRange: range)
             temperatureHistory = await HistoryGenerator.shared.fetchChartData(for: firstStation.id, type: .temperature, timeRange: range)
-        }
-
-        if pressureHistory.isEmpty {
-            pressureHistory = generateSampleData(startDate: startDate, endDate: now, baseValue: 4.0, variance: 0.5, timeRange: range)
-            flowRateHistory = generateSampleData(startDate: startDate, endDate: now, baseValue: 120.0, variance: 20.0, timeRange: range)
-            temperatureHistory = generateSampleData(startDate: startDate, endDate: now, baseValue: 25.0, variance: 5.0, timeRange: range)
+        } else {
+            pressureHistory = []
+            flowRateHistory = []
+            temperatureHistory = []
         }
 
         isLoading = false
-    }
-
-    private func generateSampleData(startDate: Date, endDate: Date, baseValue: Double, variance: Double, timeRange: TimeRange) -> [ChartDataPoint] {
-        var points: [ChartDataPoint] = []
-        let calendar = Calendar.current
-        let hourInterval = max(1, Int(timeRange.hours / 24))
-
-        var currentDate = startDate
-        while currentDate <= endDate {
-            let randomOffset = Double.random(in: -variance...variance)
-            let value = baseValue + randomOffset
-            points.append(ChartDataPoint(timestamp: currentDate, value: value, label: ""))
-            currentDate = calendar.date(byAdding: .hour, value: hourInterval, to: currentDate) ?? currentDate
-        }
-
-        return points
     }
 }

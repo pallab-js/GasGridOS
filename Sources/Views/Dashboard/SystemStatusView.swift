@@ -5,6 +5,14 @@ struct SystemStatusView: View {
     let pipelines: [Pipeline]
     let sensors: [Sensor]
 
+    /// A pipeline counts as online only when both of its endpoints are online.
+    private var onlinePipelines: Int {
+        let statusById = Dictionary(uniqueKeysWithValues: stations.map { ($0.id, $0.status) })
+        return pipelines.filter { pipeline in
+            statusById[pipeline.startStationId] == .online && statusById[pipeline.endStationId] == .online
+        }.count
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("System Status")
@@ -20,7 +28,7 @@ struct SystemStatusView: View {
 
                 StatusItem(
                     title: "Pipelines",
-                    online: pipelines.count,
+                    online: onlinePipelines,
                     total: pipelines.count,
                     icon: "cable.connector"
                 )

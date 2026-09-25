@@ -4,8 +4,6 @@ struct AccessibilitySettingsView: View {
     @AppStorage("reduceMotion") private var reduceMotion = false
     @AppStorage("increaseContrast") private var increaseContrast = false
     @AppStorage("largerText") private var largerText = false
-    @AppStorage("voiceOverEnabled") private var voiceOverEnabled = false
-    @AppStorage("highContrastMode") private var highContrastMode = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -19,19 +17,28 @@ struct AccessibilitySettingsView: View {
                         .help("Minimize animations and transitions")
 
                     Toggle("Increase Contrast", isOn: $increaseContrast)
-                        .help("Enhance visual distinction between elements")
-
-                    Toggle("High Contrast Mode", isOn: $highContrastMode)
-                        .help("Use high contrast colors for better visibility")
+                        .help("Render text with a heavier weight for better legibility")
 
                     Toggle("Larger Text", isOn: $largerText)
                         .help("Use larger text throughout the app")
                 }
 
-                Section("VoiceOver") {
-                    Toggle("Enable VoiceOver Hints", isOn: $voiceOverEnabled)
-                        .help("Provide additional VoiceOver descriptions")
+                Section("System Settings") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("For system-wide display options such as increased contrast, bold text and VoiceOver, use macOS System Settings.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
 
+                        Button("Open Accessibility Settings") {
+                            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.universalaccess") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+
+                Section("VoiceOver") {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("VoiceOver Support")
                             .font(.subheadline)
@@ -45,7 +52,7 @@ struct AccessibilitySettingsView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Full Keyboard Access")
                             .font(.subheadline)
-                        Text("All features can be accessed using keyboard shortcuts. Press ⌘ + ? to view all available shortcuts.")
+                        Text("All features can be accessed using keyboard shortcuts. See the Keyboard tab for the list of available shortcuts.")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }

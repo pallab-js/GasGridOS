@@ -27,6 +27,9 @@ struct AlertListView: View {
         .task {
             await viewModel.loadData()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .gasGridRefreshData)) { _ in
+            Task { await viewModel.loadData() }
+        }
         .sheet(item: $selectedAlert) { alert in
             AlertDetailView(alert: alert) { notes in
                 viewModel.acknowledgeAlert(alert, notes: notes)
@@ -113,18 +116,39 @@ struct AlertListView: View {
         .padding(.vertical, 8)
     }
 
+    private var hasActiveFilter: Bool {
+        viewModel.selectedSeverity != nil || viewModel.showUnacknowledgedOnly
+    }
+
+    @ViewBuilder
     private var emptyStateView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 48))
-                .foregroundColor(.green)
-            Text("No alerts")
-                .font(.title3)
-            Text("All systems operating normally")
-                .font(.caption)
-                .foregroundColor(.secondary)
+        if viewModel.alerts.isEmpty {
+            VStack(spacing: 16) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 48))
+                    .foregroundColor(.green)
+                Text("No alerts")
+                    .font(.title3)
+                Text("All systems operating normally")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .frame(maxHeight: .infinity)
+        } else {
+            VStack(spacing: 16) {
+                Image(systemName: "line.3.horizontal.decrease.circle")
+                    .font(.system(size: 48))
+                    .foregroundColor(.secondary)
+                Text("No alerts match the current filters")
+                    .font(.title3)
+                Button("Clear Filters") {
+                    viewModel.selectedSeverity = nil
+                    viewModel.showUnacknowledgedOnly = false
+                }
+                .buttonStyle(.bordered)
+            }
+            .frame(maxHeight: .infinity)
         }
-        .frame(maxHeight: .infinity)
     }
 
     private var alertList: some View {
@@ -132,13 +156,16 @@ struct AlertListView: View {
             LazyVStack(spacing: 0) {
                 let lastId = viewModel.filteredAlerts.last?.id
                 ForEach(viewModel.filteredAlerts) { alert in
-                    AlertRowView(
-                        alert: alert,
-                        onAcknowledge: { viewModel.acknowledgeAlert(alert) },
-                        onDelete: { alertToDelete = alert }
-                    )
-                    .onTapGesture { selectedAlert = alert }
-                    .accessibilityAddTraits(.isButton)
+                    Button {
+                        selectedAlert = alert
+                    } label: {
+                        AlertRowView(
+                            alert: alert,
+                            onAcknowledge: { viewModel.acknowledgeAlert(alert) },
+                            onDelete: { alertToDelete = alert }
+                        )
+                    }
+                    .buttonStyle(.plain)
                     .accessibilityHint("View alert details")
                     if alert.id != lastId {
                         Divider().padding(.leading, 48)
@@ -209,9 +236,10 @@ struct AlertRowView: View {
                     .foregroundColor(.secondary)
                     .lineLimit(2)
 
-                HStack {
+                HStack(spacing: 4) {
                     Text(alert.timestamp, style: .relative)
                     Text("ago")
+                        .foregroundColor(.secondary)
                 }
                 .font(.caption)
                 .foregroundColor(.secondary)
@@ -239,7 +267,7 @@ struct AlertRowView: View {
                         .foregroundColor(.secondary)
                 }
                 .menuStyle(.borderlessButton)
-                .accessibilityLabel("More actions")
+                .accessibilityLabel("More actions for \(alert.title)")
             }
         }
         .padding(.horizontal)

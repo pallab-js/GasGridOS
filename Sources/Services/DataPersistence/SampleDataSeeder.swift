@@ -1,19 +1,18 @@
 import Foundation
+import GRDB
 
-final class SampleDataSeeder: @unchecked Sendable {
+final class SampleDataSeeder: Sendable {
     static let shared = SampleDataSeeder()
-
-    private let stationRepo = StationRepository()
-    private let pipelineRepo = PipelineRepository()
-    private let sensorRepo = SensorRepository()
-    private let alertRepo = AlertRepository()
-    private let valveRepo = ValveRepository()
 
     private init() {}
 
-    func seedSampleData() throws {
-        let existingStations = try stationRepo.fetchAll()
-        guard existingStations.isEmpty else { return }
+    /// Seeds the demo dataset once, inside a single transaction.
+    /// - Returns: `true` when data was inserted, `false` when it already existed.
+    @discardableResult
+    func seedSampleData() throws -> Bool {
+        let dbQueue = try DatabaseManager.shared.requireQueue()
+        let existingStations = try dbQueue.read { db in try NetworkStation.fetchAll(db) }
+        guard existingStations.isEmpty else { return false }
 
         let station1 = NetworkStation(
             name: "Central Distribution Hub",
@@ -80,12 +79,6 @@ final class SampleDataSeeder: @unchecked Sendable {
             minimumPressure: 2.0
         )
 
-        try stationRepo.insert(station1)
-        try stationRepo.insert(station2)
-        try stationRepo.insert(station3)
-        try stationRepo.insert(station4)
-        try stationRepo.insert(station5)
-
         let pipeline1 = Pipeline(
             name: "Main Transmission Line",
             startStationId: station1.id,
@@ -142,11 +135,6 @@ final class SampleDataSeeder: @unchecked Sendable {
             length: 6.8
         )
 
-        try pipelineRepo.insert(pipeline1)
-        try pipelineRepo.insert(pipeline2)
-        try pipelineRepo.insert(pipeline3)
-        try pipelineRepo.insert(pipeline4)
-
         let sensor1 = Sensor(
             name: "Pressure Sensor A1",
             stationId: station1.id,
@@ -183,11 +171,6 @@ final class SampleDataSeeder: @unchecked Sendable {
             lastReadingDate: Date()
         )
 
-        try sensorRepo.insert(sensor1)
-        try sensorRepo.insert(sensor2)
-        try sensorRepo.insert(sensor3)
-        try sensorRepo.insert(sensor4)
-
         let alert1 = Alert(
             stationId: station3.id,
             severity: .high,
@@ -219,11 +202,6 @@ final class SampleDataSeeder: @unchecked Sendable {
             message: "Firmware update available for sensors",
             timestamp: Date().addingTimeInterval(-3600)
         )
-
-        try alertRepo.insert(alert1)
-        try alertRepo.insert(alert2)
-        try alertRepo.insert(alert3)
-        try alertRepo.insert(alert4)
 
         let valve1 = Valve(
             name: "Main Gate Valve",
@@ -261,9 +239,61 @@ final class SampleDataSeeder: @unchecked Sendable {
             diameter: 100
         )
 
-        try valveRepo.insert(valve1)
-        try valveRepo.insert(valve2)
-        try valveRepo.insert(valve3)
-        try valveRepo.insert(valve4)
+        try dbQueue.write { db in
+            for station in [station1, station2, station3, station4, station5] {
+                try station.save(db)
+            }
+            for pipeline in [pipeline1, pipeline2, pipeline3, pipeline4] {
+                try pipeline.save(db)
+            }
+            for sensor in [sensor1, sensor2, sensor3, sensor4] {
+                try sensor.save(db)
+            }
+            for alert in [alert1, alert2, alert3, alert4] {
+                try alert.save(db)
+            }
+            for valve in [valve1, valve2, valve3, valve4] {
+                try valve.save(db)
+            }
+        }
+        return true
+    }
+
+    /// Backfills the telemetry sensors that history generation and charts depend on.
+    /// Idempotent: only sensors that are missing for a station are inserted.
+    func ensureTelemetrySensors(for stations: [NetworkStation]) throws {
+        let dbQueue = try DatabaseManager.shared.requireQueue()
+
+        for station in stations {
+            let existing = try dbQueue.read { db in
+                try Sensor.filter(Column("stationId") == station.id).fetchAll(db)
+            }
+            let missingTypes = [SensorType.pressure, .flowRate, .temperature].filter { type in
+                !existing.contains { $0.sensorType == type }
+            }
+            guard !missingTypes.isEmpty else { continue }
+
+            try dbQueue.write { db in
+                for type in missingTypes {
+                    let sensor = Sensor(
+                        name: "\(type.rawValue) Sensor \(station.name)",
+                        stationId: station.id,
+                        sensorType: type,
+                        lastReading: currentReading(for: type, station: station),
+                        lastReadingDate: Date()
+                    )
+                    try sensor.save(db)
+                }
+            }
+        }
+    }
+
+    private func currentReading(for type: SensorType, station: NetworkStation) -> Double {
+        switch type {
+        case .pressure: return station.pressure
+        case .flowRate: return station.flowRate
+        case .temperature: return station.temperature
+        default: return 0
+        }
     }
 }

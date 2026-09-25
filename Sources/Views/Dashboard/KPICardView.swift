@@ -24,14 +24,17 @@ struct KPICardView: View {
                     .font(.title2)
                     .foregroundColor(color)
                 Spacer()
-                if let trend = trend, let isPositive = isPositiveTrend {
+                if let trend = trend {
                     HStack(spacing: 2) {
-                        Image(systemName: isPositive ? "arrow.up" : "arrow.down")
-                            .font(.caption)
+                        if let isPositive = isPositiveTrend {
+                            Image(systemName: isPositive ? "arrow.up" : "arrow.down")
+                                .font(.caption)
+                        }
                         Text(trend)
                             .font(.caption)
                     }
-                    .foregroundColor(isPositive ? .green : .red)
+                    .foregroundColor(trendColor)
+                    .accessibilityHidden(true)
                 }
             }
 
@@ -49,6 +52,17 @@ struct KPICardView: View {
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(title): \(value)")
+        .accessibilityLabel(accessibilityText)
+    }
+
+    private var trendColor: Color {
+        guard let isPositive = isPositiveTrend else { return .secondary }
+        return isPositive ? .green : .red
+    }
+
+    private var accessibilityText: String {
+        guard let trend = trend else { return "\(title): \(value)" }
+        let direction = isPositiveTrend == nil ? "no change" : (isPositiveTrend! ? "rising" : "falling")
+        return "\(title): \(value), \(direction) by \(trend)"
     }
 }

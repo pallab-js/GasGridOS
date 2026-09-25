@@ -159,12 +159,14 @@ struct NetworkMapView: View {
                     PipelineShapeView(pipeline: pipeline, stations: viewModel.stations, positions: viewModel.stationPositions)
                 }
 
-                ForEach(viewModel.stations) { station in
+                ForEach(viewModel.stations.filter { viewModel.stationPositions[$0.id] != nil }) { station in
                     StationMarkerView(station: station, position: viewModel.stationPositions[station.id]) {
                         viewModel.selectStation(station)
                     }
                 }
             }
+            .frame(width: 800, height: 600)
+            .scaleEffect(zoomLevel)
             .frame(width: 800 * zoomLevel, height: 600 * zoomLevel)
         }
         .sheet(item: $viewModel.selectedStation) { station in

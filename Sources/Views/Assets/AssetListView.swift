@@ -19,7 +19,7 @@ struct AssetListView: View {
             if viewModel.isLoading {
                 ProgressView("Loading assets...")
                     .frame(maxHeight: .infinity)
-            } else if viewModel.filteredStations.isEmpty && viewModel.filteredPipelines.isEmpty && viewModel.sensors.isEmpty {
+            } else if visibleSectionIsEmpty {
                 emptyStateView
             } else {
                 assetContent
@@ -104,22 +104,59 @@ struct AssetListView: View {
         .padding(.vertical, 8)
     }
 
-    private var emptyStateView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "shippingbox")
-                .font(.system(size: 48))
-                .foregroundColor(.secondary)
-            Text("No assets found")
-                .font(.title3)
-            Text("Add stations and pipelines to get started")
-                .font(.caption)
-                .foregroundColor(.secondary)
-            Button("Add Station") {
-                showingAddStation = true
-            }
-            .buttonStyle(.borderedProminent)
+    private var visibleSectionIsEmpty: Bool {
+        switch viewModel.selectedFilter {
+        case .all:
+            return viewModel.filteredStations.isEmpty &&
+                viewModel.filteredPipelines.isEmpty &&
+                viewModel.filteredSensors.isEmpty &&
+                viewModel.filteredValves.isEmpty
+        case .stations:
+            return viewModel.filteredStations.isEmpty
+        case .pipelines:
+            return viewModel.filteredPipelines.isEmpty
+        case .sensors:
+            return viewModel.filteredSensors.isEmpty
+        case .valves:
+            return viewModel.filteredValves.isEmpty
         }
-        .frame(maxHeight: .infinity)
+    }
+
+    @ViewBuilder
+    private var emptyStateView: some View {
+        if viewModel.hasAnyAssets {
+            VStack(spacing: 16) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 48))
+                    .foregroundColor(.secondary)
+                Text("No assets match your search")
+                    .font(.title3)
+                Text("Adjust the search field or filter to see results")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Button("Clear Search") {
+                    viewModel.searchText = ""
+                }
+                .buttonStyle(.bordered)
+            }
+            .frame(maxHeight: .infinity)
+        } else {
+            VStack(spacing: 16) {
+                Image(systemName: "shippingbox")
+                    .font(.system(size: 48))
+                    .foregroundColor(.secondary)
+                Text("No assets found")
+                    .font(.title3)
+                Text("Add stations and pipelines to get started")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Button("Add Station") {
+                    showingAddStation = true
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .frame(maxHeight: .infinity)
+        }
     }
 
     private var assetContent: some View {
@@ -154,11 +191,23 @@ struct AssetListView: View {
                 }
 
                 if viewModel.selectedFilter == .all || viewModel.selectedFilter == .sensors {
-                    assetSection(title: "Sensors", count: viewModel.sensors.count) {
-                        let lastId = viewModel.sensors.last?.id
-                        ForEach(viewModel.sensors) { sensor in
+                    assetSection(title: "Sensors", count: viewModel.filteredSensors.count) {
+                        let lastId = viewModel.filteredSensors.last?.id
+                        ForEach(viewModel.filteredSensors) { sensor in
                             SensorRowView(sensor: sensor)
                             if sensor.id != lastId {
+                                Divider().padding(.leading, 48)
+                            }
+                        }
+                    }
+                }
+
+                if viewModel.selectedFilter == .all || viewModel.selectedFilter == .valves {
+                    assetSection(title: "Valves", count: viewModel.filteredValves.count) {
+                        let lastId = viewModel.filteredValves.last?.id
+                        ForEach(viewModel.filteredValves) { valve in
+                            AssetValveRowView(valve: valve)
+                            if valve.id != lastId {
                                 Divider().padding(.leading, 48)
                             }
                         }
@@ -244,6 +293,7 @@ struct PipelineRowView: View {
             Image(systemName: "cable.connector")
                 .foregroundColor(.green)
                 .frame(width: 24)
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading) {
                 Text(pipeline.name)
@@ -262,10 +312,45 @@ struct PipelineRowView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+    }
+}
 
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundColor(.secondary)
+struct AssetValveRowView: View {
+    let valve: Valve
+
+    var body: some View {
+        HStack {
+            Image(systemName: valve.valveType.icon)
+                .foregroundColor(.blue)
+                .frame(width: 24)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading) {
+                Text(valve.name)
+                    .fontWeight(.medium)
+                Text(valve.valveType.rawValue)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+
+            StatusBadge(
+                text: valve.status.rawValue,
+                color: valve.status.color,
+                icon: valve.status.icon
+            )
+
+            VStack(alignment: .trailing) {
+                Text(String(format: "%.0f%% open", valve.position * 100))
+                    .font(.caption)
+                Text(String(format: "%.0f mm", valve.diameter))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
@@ -307,10 +392,6 @@ struct SensorRowView: View {
                         .foregroundColor(.secondary)
                 }
             }
-
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundColor(.secondary)
         }
         .padding(.horizontal)
         .padding(.vertical, 8)

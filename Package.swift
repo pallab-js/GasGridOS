@@ -20,5 +20,13 @@ let package = Package(
             ],
             path: "Sources"
         ),
+        .testTarget(
+            name: "GasGridManagerTests",
+            dependencies: [
+                "GasGridManager",
+                .product(name: "GRDB", package: "GRDB.swift"),
+            ],
+            path: "Tests/GasGridManagerTests"
+        ),
     ]
 )

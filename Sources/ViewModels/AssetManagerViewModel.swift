@@ -39,6 +39,24 @@ final class AssetManagerViewModel: ObservableObject {
         return pipelines.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
     }
 
+    var filteredSensors: [Sensor] {
+        if searchText.isEmpty {
+            return sensors
+        }
+        return sensors.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+    }
+
+    var filteredValves: [Valve] {
+        if searchText.isEmpty {
+            return valves
+        }
+        return valves.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+    }
+
+    var hasAnyAssets: Bool {
+        !stations.isEmpty || !pipelines.isEmpty || !sensors.isEmpty || !valves.isEmpty
+    }
+
     func loadData() async {
         isLoading = true
 
@@ -57,12 +75,14 @@ final class AssetManagerViewModel: ObservableObject {
     func deleteStation(_ station: NetworkStation) throws {
         try stationRepo.delete(station)
         stations.removeAll { $0.id == station.id }
+        SpotlightService.shared.removeIndex(for: "station-\(station.id.uuidString)")
         DatabaseManager.shared.logAuditEvent("DELETE_STATION", details: "Deleted station '\(station.name)' (ID: \(station.id.uuidString))")
     }
 
     func deletePipeline(_ pipeline: Pipeline) throws {
         try pipelineRepo.delete(pipeline)
         pipelines.removeAll { $0.id == pipeline.id }
+        SpotlightService.shared.removeIndex(for: "pipeline-\(pipeline.id.uuidString)")
         DatabaseManager.shared.logAuditEvent("DELETE_PIPELINE", details: "Deleted pipeline '\(pipeline.name)' (ID: \(pipeline.id.uuidString))")
     }
 

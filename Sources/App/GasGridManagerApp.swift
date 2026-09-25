@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 @main
 struct GasGridManagerApp: App {
@@ -7,14 +8,20 @@ struct GasGridManagerApp: App {
     @StateObject private var simulator = RealTimeSimulator()
     @StateObject private var notificationService = NotificationService.shared
     @State private var databaseError: String?
+    @State private var didInitialize = false
 
     var body: some Scene {
         WindowGroup {
             ContentView(selectedTab: $selectedTab, simulator: simulator)
                 .frame(minWidth: 900, minHeight: 680)
                 .onAppear {
+                    guard !didInitialize else { return }
+                    didInitialize = true
                     setupDatabase()
                     simulator.startSimulation()
+                    simulator.onAlertGenerated = { alert in
+                        NotificationService.shared.sendAlertNotification(alert: alert)
+                    }
                     Task {
                         await notificationService.checkAuthorization()
                     }
@@ -33,6 +40,28 @@ struct GasGridManagerApp: App {
         }
         .windowToolbarStyle(.unified(showsTitle: true))
         .defaultSize(width: 1100, height: 800)
+        .commands {
+            CommandMenu("Navigate") {
+                ForEach(Array(SidebarView.SidebarTab.allCases.enumerated()), id: \.element.id) { index, tab in
+                    Button(tab.rawValue) {
+                        selectedTab = tab
+                    }
+                    .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: .command)
+                }
+            }
+
+            CommandGroup(after: .saveItem) {
+                Button("Refresh Data") {
+                    NotificationCenter.default.post(name: .gasGridRefreshData, object: nil)
+                }
+                .keyboardShortcut("r", modifiers: .command)
+
+                Button("Export Data") {
+                    selectedTab = .export
+                }
+                .keyboardShortcut("e", modifiers: .command)
+            }
+        }
 
         #if os(macOS)
         Settings {
@@ -47,7 +76,16 @@ struct GasGridManagerApp: App {
             try DatabaseManager.shared.openDatabase()
             try SampleDataSeeder.shared.seedSampleData()
             let stations = try StationRepository().fetchAll()
-            if !stations.isEmpty {
+            try SampleDataSeeder.shared.ensureTelemetrySensors(for: stations)
+
+            let historyRepo = DataHistoryRepository()
+            try historyRepo.deleteOrphanedReadings()
+
+            let calendar = Calendar.current
+            let now = Date()
+            if !stations.isEmpty,
+               let weekAgo = calendar.date(byAdding: .day, value: -7, to: now),
+               try historyRepo.countInTimeRange(startDate: weekAgo, endDate: now) == 0 {
                 HistoryGenerator.shared.generateHistoryData(for: stations, days: 7)
             }
         } catch {
@@ -63,7 +101,7 @@ struct ContentView: View {
     var body: some View {
         NavigationSplitView {
             VStack {
-                SidebarView(selectedTab: $selectedTab)
+                SidebarView(selectedTab: $selectedTab, simulator: simulator)
                     .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 240)
 
                 if simulator.isRunning {
@@ -76,10 +114,24 @@ struct ContentView: View {
                             .foregroundColor(.secondary)
                     }
                     .padding(.bottom, 8)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Live simulation running")
                 }
             }
         } detail: {
             detailView
+        }
+        .modifier(AccessibilityPreferences())
+        .onReceive(NotificationCenter.default.publisher(for: .gasGridOpenAlert)) { _ in
+            selectedTab = .alerts
+        }
+        .alert("Simulation Error", isPresented: .init(
+            get: { simulator.errorMessage != nil },
+            set: { if !$0 { simulator.errorMessage = nil } }
+        )) {
+            Button("OK") { simulator.errorMessage = nil }
+        } message: {
+            Text(simulator.errorMessage ?? "")
         }
     }
 
@@ -108,11 +160,45 @@ struct ContentView: View {
     }
 }
 
-class AppDelegate: NSObject, NSApplicationDelegate {
-    func applicationDidFinishLaunching(_ notification: Notification) {
-        Task {
-            await NotificationService.shared.requestAuthorization()
+/// Applies the user's accessibility preferences app-wide.
+private struct AccessibilityPreferences: ViewModifier {
+    @AppStorage("reduceMotion") private var reduceMotion = false
+    @AppStorage("largerText") private var largerText = false
+    @AppStorage("increaseContrast") private var increaseContrast = false
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        let prepared = content
+            .transaction { transaction in
+                if reduceMotion || systemReduceMotion {
+                    transaction.disablesAnimations = true
+                }
+            }
+            .environment(\.legibilityWeight, increaseContrast ? .bold : .regular)
+
+        if largerText {
+            prepared.dynamicTypeSize(.accessibility1)
+        } else {
+            prepared
         }
+    }
+}
+
+class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        // Keeps raw UserDefaults reads consistent with the @AppStorage defaults
+        // used by SettingsView and AccessibilitySettingsView.
+        UserDefaults.standard.register(defaults: [
+            "refreshInterval": 5,
+            "enableNotifications": true,
+            "enableSoundAlerts": true,
+            "showAlertBadges": true,
+            "autoRefresh": true,
+            "reduceMotion": false,
+            "increaseContrast": false,
+            "largerText": false
+        ])
     }
 
     func applicationWillTerminate(_ notification: Notification) {
