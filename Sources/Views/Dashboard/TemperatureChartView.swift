@@ -70,7 +70,8 @@ struct TemperatureChartView: View {
                 }
             }
         }
-        .chartYScale(domain: (data.map(\.value).min() ?? 0)...(data.map(\.value).max() ?? 1))
+        .chartYScale(domain: ChartScales.yDomain(for: data))
+        .chartXScale(domain: ChartScales.xDomain(for: data))
         .frame(height: chartHeight)
     }
 }

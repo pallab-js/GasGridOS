@@ -40,7 +40,7 @@ struct FlowRateChartView: View {
     private var chartContent: some View {
         Chart(data) { point in
             BarMark(
-                x: .value("Time", point.timestamp),
+                x: .value("Time", point.timestamp, unit: .hour),
                 y: .value("Value", point.value)
             )
             .foregroundStyle(.green)
@@ -63,7 +63,8 @@ struct FlowRateChartView: View {
                 }
             }
         }
-        .chartYScale(domain: (data.map(\.value).min() ?? 0)...(data.map(\.value).max() ?? 1))
+        .chartYScale(domain: ChartScales.yDomain(for: data))
+        .chartXScale(domain: ChartScales.xDomain(for: data))
         .frame(height: chartHeight)
     }
 }
